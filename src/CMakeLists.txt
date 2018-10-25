@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.7)
 
-#add_subdirectory(query)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -pedantic -Wno-unused-result -Wno-unused-parameter")
 
@@ -11,7 +10,8 @@ set(SOURCE_FILES
         utils/formatter.h utils/uexception.h
 
         query/Query.cpp query/Query.h
-        query/QueryParser.cpp query/QueryParser.h query/QueryResult.h
+        query/QueryParser.cpp query/QueryParser.h
+        query/QueryResult.h query/QueryResult.cpp
         query/QueryBuilders.cpp query/QueryBuilders.h
 
         query/management/LoadTableQuery.cpp query/management/LoadTableQuery.h

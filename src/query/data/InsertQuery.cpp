@@ -22,11 +22,12 @@ QueryResult::Ptr InsertQuery::execute() {
         auto &table = db[this->targetTable];
         auto &key = this->operands.front();
         vector<Table::ValueType> data;
-        for_each(++this->operands.begin(), this->operands.end(), [&data](const string &item) {
-            data.emplace_back(strtol(item.c_str(), nullptr, 10));
-        });
+        data.reserve(this->operands.size() - 1);
+        for (auto it = ++this->operands.begin(); it != this->operands.end(); ++it) {
+            data.emplace_back(strtol(it->c_str(), nullptr, 10));
+        }
         table.insertByIndex(key, move(data));
-        return make_unique<NullQueryResult>();
+        return std::make_unique<SuccessMsgResult>(qname, targetTable);
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);

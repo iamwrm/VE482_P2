@@ -6,9 +6,9 @@
 #include "query/QueryBuilders.h"
 
 #include <getopt.h>
-#include <string>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <string>
 
 struct {
     std::string listen;
@@ -41,7 +41,7 @@ std::string extractQueryString(std::istream &is) {
         int ch = is.get();
         if (ch == ';') return buf;
         if (ch == EOF) throw std::ios_base::failure("End of input");
-        buf.push_back(ch);
+        buf.push_back((char) ch);
     } while (true);
 }
 
@@ -102,18 +102,25 @@ int main(int argc, char *argv[]) {
             std::string queryStr = extractQueryString(is);
             Query::Ptr query = p.parseQuery(queryStr);
             QueryResult::Ptr result = query->execute();
-            std::cout << ++counter << std::endl;
+            std::cout << ++counter << "\n";
             if (result->success()) {
-                std::cout << result->toString() << std::endl;
+                if (result->display()) {
+                    std::cout << *result;
+                } else {
+#ifndef NDEBUG
+                    std::cout.flush();
+                    std::cerr << *result;
+#endif
+                }
             } else {
-                std::flush(std::cout);
-                std::cerr << "QUERY FAILED:\n\t" << result->toString() << std::endl;
+                std::cout.flush();
+                std::cerr << "QUERY FAILED:\n\t" << *result;
             }
         }  catch (const std::ios_base::failure& e) {
             // End of input
             break;
         } catch (const std::exception& e) {
-            std::flush(std::cout);
+            std::cout.flush();
             std::cerr << e.what() << std::endl;
         }
     }

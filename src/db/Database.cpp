@@ -5,6 +5,7 @@
 #include "Database.h"
 #include "Table.h"
 
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -100,6 +101,91 @@ std::string Database::getFileTableName(const std::string &fileName) {
     } else {
         return it->second;
     }
+}
+
+Table &Database::loadTableFromStream(std::istream &is, std::string source) {
+    auto &db = Database::getInstance();
+    std::string errString =
+            !source.empty() ?
+            R"(Invalid table (from "?") format: )"_f % source :
+            "Invalid table format: ";
+
+    std::string tableName;
+    Table::SizeType fieldCount;
+    std::deque<Table::KeyType> fields;
+
+    std::string line;
+    std::stringstream sstream;
+    if (!std::getline(is, line))
+        throw LoadFromStreamException(
+                errString + "Failed to read table metadata line."
+        );
+
+    sstream.str(line);
+    sstream >> tableName >> fieldCount;
+    if (!sstream) {
+        throw LoadFromStreamException(
+                errString + "Failed to parse table metadata."
+        );
+    }
+
+    // throw error if tableName duplicates
+    db.testDuplicate(tableName);
+
+    if (!(std::getline(is, line))) {
+        throw LoadFromStreamException(
+                errString + "Failed to load field names."
+        );
+    }
+
+    sstream.clear();
+    sstream.str(line);
+    for (Table::SizeType i = 0; i < fieldCount; ++i) {
+        std::string field;
+        if (!(sstream >> field)) {
+            throw LoadFromStreamException(
+                    errString + "Failed to load field names."
+            );
+        }
+        else {
+            fields.emplace_back(std::move(field));
+        }
+    }
+
+    if (fields.front() != "KEY") {
+        throw LoadFromStreamException(
+                errString + "Missing or invalid KEY field."
+        );
+    }
+
+    fields.erase(fields.begin()); // Remove leading key
+    auto table = std::make_unique<Table>(tableName, fields);
+
+    Table::SizeType lineCount = 2;
+    while (std::getline(is, line)) {
+        if (line.empty()) break; // Read to an empty line
+        lineCount++;
+        sstream.clear();
+        sstream.str(line);
+        std::string key;
+        if (!(sstream >> key))
+            throw LoadFromStreamException(
+                    errString + "Missing or invalid KEY field."
+            );
+        std::vector<Table::ValueType> tuple;
+        tuple.reserve(fieldCount - 1);
+        for (Table::SizeType i = 1; i < fieldCount; ++i) {
+            Table::ValueType value;
+            if (!(sstream >> value))
+                throw LoadFromStreamException(
+                        errString + "Invalid row on LINE " + std::to_string(lineCount)
+                );
+            tuple.emplace_back(value);
+        }
+        table->insertByIndex(key, std::move(tuple));
+    }
+
+    return db.registerTable(std::move(table));
 }
 
 void Database::exit() {

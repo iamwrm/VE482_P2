@@ -15,22 +15,22 @@
 #include "data/InsertQuery.h"
 #include "data/UpdateQuery.h"
 
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 
 // Prints out debugging information.
 // Does no real work
 Query::Ptr FakeQueryBuilder::tryExtractQuery
         (TokenizedQueryString &query) {
-    std::cout << "Query string: \n" << query.rawQeuryString << "\n";
-    std::cout << "Tokens:\n";
+    std::cerr << "Query string: \n" << query.rawQeuryString << "\n";
+    std::cerr << "Tokens:\n";
     int count = 0;
     for (const auto &tok : query.token) {
-        std::cout << std::setw(10) << "\"" << tok << "\"";
+        std::cerr << std::setw(10) << "\"" << tok << "\"";
         count = (count + 1) % 5;
-        if (count == 4) std::cout << std::endl;
+        if (count == 4) std::cerr << std::endl;
     }
-    if (count != 4) std::cout << std::endl;
+    if (count != 4) std::cerr << std::endl;
     return this->nextBuilder->tryExtractQuery(query);
 }
 
@@ -140,7 +140,7 @@ Query::Ptr ComplexQueryBuilder::tryExtractQuery(TokenizedQueryString &query) {
     try {
         this->parseToken(query);
     } catch (const IllFormedQuery &e) {
-        std::cout << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return this->nextBuilder->tryExtractQuery(query);
     }
     std::string operation = query.token.front();
@@ -190,20 +190,20 @@ Query::Ptr ComplexQueryBuilder::tryExtractQuery(TokenizedQueryString &query) {
         return std::make_unique<NopQuery>(); // Not implemented
         /*return std::make_unique<SwapQuery>(
                 this->targetTable, this->operandToken, this->conditionToken);*/
-    std::cout << "Complicated query found!" << std::endl;
-    std::cout << "Operation = " << query.token.front() << std::endl;
-    std::cout << "    Operands : ";
+    std::cerr << "Complicated query found!" << std::endl;
+    std::cerr << "Operation = " << query.token.front() << std::endl;
+    std::cerr << "    Operands : ";
     for (const auto &oprand : this->operandToken)
-        std::cout << oprand << " ";
-    std::cout << std::endl;
-    std::cout << "Target Table = " << this->targetTable << std::endl;
+        std::cerr << oprand << " ";
+    std::cerr << std::endl;
+    std::cerr << "Target Table = " << this->targetTable << std::endl;
     if (this->conditionToken.empty())
-        std::cout << "No WHERE clause specified." << std::endl;
+        std::cerr << "No WHERE clause specified." << std::endl;
     else
-        std::cout << "Conditions = ";
+        std::cerr << "Conditions = ";
     for (const auto &cond : this->conditionToken)
-        std::cout << cond.field << cond.op << cond.value << " ";
-    std::cout << std::endl;
+        std::cerr << cond.field << cond.op << cond.value << " ";
+    std::cerr << std::endl;
 
     return this->nextBuilder->tryExtractQuery(query);
 }

@@ -39,8 +39,6 @@ do {\
     }\
 } while(0)
 
-class Table;
-
 class Table {
 public:
     typedef std::string KeyType;
@@ -371,14 +369,19 @@ public:
     friend std::ostream &operator<<(std::ostream &os, const Table &table);
 };
 
-/**
- * Load a table from an input stream (i.e., a file)
- * @param is
- * @param source
- * @return reference of loaded table
- */
-Table &loadTableFromStream(std::istream &is, std::string source = "");
-
 std::ostream &operator<<(std::ostream &os, const Table &table);
+
+template<class FieldIDContainer>
+Table::Table(const std::string &name, const FieldIDContainer &fields)
+        : fields(fields.cbegin(), fields.cend()), tableName(name) {
+    SizeType i = 0;
+    for (const auto &field : fields) {
+        if (field == "KEY")
+            throw MultipleKey(
+                    "Error creating table \"" + name + "\": Multiple KEY field."
+            );
+        fieldMap.emplace(field, i++);
+    }
+}
 
 #endif //PROJECT_DB_TABLE_H

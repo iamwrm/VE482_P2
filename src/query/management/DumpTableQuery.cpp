@@ -9,21 +9,22 @@
 
 constexpr const char *DumpTableQuery::qname;
 
-std::string DumpTableQuery::toString() {
-    return "QUERY = Dump TABLE, FILE = \"" + this->fileName + "\"";
-}
-
 QueryResult::Ptr DumpTableQuery::execute() {
+    using namespace std;
+    auto &db = Database::getInstance();
     try {
-        std::ofstream outfile(this->fileName);
+        ofstream outfile(this->fileName);
         if (!outfile.is_open()) {
-            return std::make_unique<ErrorMsgResult>(qname, "Cannot open file '?'"_f % this->fileName);
+            return make_unique<ErrorMsgResult>(qname, "Cannot open file '?'"_f % this->fileName);
         }
-        auto &db = Database::getInstance();
         outfile << db[this->targetTable];
         outfile.close();
-    } catch (const std::exception &e) {
-        return std::make_unique<ErrorMsgResult>(qname, e.what());
+        return make_unique<SuccessMsgResult>(qname, targetTable);
+    } catch (const exception &e) {
+        return make_unique<ErrorMsgResult>(qname, e.what());
     }
-    return std::make_unique<SuccessMsgResult>(qname);
+}
+
+std::string DumpTableQuery::toString() {
+    return "QUERY = Dump TABLE, FILE = \"" + this->fileName + "\"";
 }

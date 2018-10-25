@@ -61,6 +61,14 @@ public:
 
     std::string getFileTableName(const std::string &fileName);
 
+    /**
+     * Load a table from an input stream (i.e., a file)
+     * @param is
+     * @param source
+     * @return reference of loaded table
+     */
+    Table &loadTableFromStream(std::istream &is, std::string source = "");
+
     void exit();
 };
 
