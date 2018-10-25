@@ -23,5 +23,5 @@ QueryResult::Ptr LoadTableQuery::execute() {
     } catch (const std::exception &e) {
         return std::make_unique<ErrorMsgResult>(qname, e.what());
     }
-    return std::make_unique<SuccessMsgResult>(qname);
+    return std::make_unique<NullQueryResult>();
 }
