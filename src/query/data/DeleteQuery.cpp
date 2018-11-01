@@ -5,6 +5,8 @@
 #include "DeleteQuery.h"
 #include "../../db/Database.h"
 
+#include <iostream> 
+
 constexpr const char *DeleteQuery::qname;
 
 QueryResult::Ptr DeleteQuery::execute()
@@ -31,23 +33,19 @@ QueryResult::Ptr DeleteQuery::execute()
 		auto result = initCondition(table);
 		if (result.second) {
 			auto fixEnd = table.end();
-			for (auto it = table.begin(); it != fixEnd; ++it) {
+			auto it = table.begin();
+			while (it!=table.end()){
 				if (this->evalCondition(*it)) {
-					/*
-					if (this->keyvalue.empty()) {
-						(*it)[this->fieldid] =
-						    this->fieldvalue;
-					} else {
-						it->setkey(this->keyvalue);
-					}
-					*/
-
-					//table.pub_erase(it);
-					table.deleteByIndex((*it).key());
+					it = table.pub_erase(it);
+					//table.deleteByIndex((*it).key());
 					++counter;
+				}else {
+					it++;
 				}
 			}
+
 		}
+
 		return make_unique<RecordCountResult>(counter);
 	} catch (const TableNameNotFound &e) {
 		return make_unique<ErrorMsgResult>(qname, this->targetTable,

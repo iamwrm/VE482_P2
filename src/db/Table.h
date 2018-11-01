@@ -14,6 +14,7 @@
 #include <vector>
 #include <unordered_map>
 #include <utility>
+#include <iostream>
 
 
 #define _DBTABLE_ACCESS_WITH_NAME_EXCEPTION(field)\
@@ -295,7 +296,11 @@ public:
      * @param key
      */
     void deleteByIndex(KeyType key);
-    void pub_erase(Iterator );
+
+    Iterator pub_erase(Iterator it_input ){
+        this->keyMap.erase(it_input.it->key);
+        return Iterator(this->data.erase(it_input.it),it_input.table);
+    }
 
     /**
      * Access the value according to the key

@@ -39,6 +39,8 @@ void Table::deleteByIndex(KeyType key) {
 		throw ConflictingKey(err);
 	}
 	this->keyMap.erase(key);
+
+
     auto fixEnd = this->data.end();
     for (auto it = this->data.begin();it!=fixEnd;it++){
         if (it->key == key){
@@ -48,9 +50,6 @@ void Table::deleteByIndex(KeyType key) {
     }
 }
 
-void Table::pub_erase(Table::Iterator it){
-    //this->data.erase(it);
-}
 
 Table::Object::Ptr Table::operator[](const Table::KeyType &key) {
     auto it = keyMap.find(key);
