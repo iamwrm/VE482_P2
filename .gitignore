@@ -1,5 +1,8 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### CMake template
+build_wr
+wr_ms
+
 CMakeCache.txt
 CMakeFiles
 CMakeScripts

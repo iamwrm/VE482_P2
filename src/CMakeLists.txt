@@ -20,9 +20,12 @@ set(SOURCE_FILES
         query/management/ListTableQuery.cpp query/management/ListTableQuery.h
         query/management/QuitQuery.cpp query/management/QuitQuery.h
         query/management/PrintTableQuery.cpp query/management/PrintTableQuery.h
-
-        query/data/InsertQuery.cpp query/data/InsertQuery.h
+        query/management/CopyTableQuery.cpp 
+        query/management/CopyTableQuery.h
+        
+        query/data/InsertQuery.cpp query/data/InsertQuery.h 
         query/data/UpdateQuery.cpp query/data/UpdateQuery.h
+        
         )
 add_executable(lemondb main.cpp ${SOURCE_FILES})
 target_link_libraries(lemondb pthread)

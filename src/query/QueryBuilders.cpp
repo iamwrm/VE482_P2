@@ -11,6 +11,7 @@
 #include "management/ListTableQuery.h"
 #include "management/QuitQuery.h"
 #include "management/PrintTableQuery.h"
+#include "management/CopyTableQuery.h"
 
 #include "data/InsertQuery.h"
 #include "data/UpdateQuery.h"
@@ -56,9 +57,15 @@ Query::Ptr ManageTableQueryBuilder::tryExtractQuery
                     query.token[1], query.token[2]
             );
         }
-        if (query.token.front() == "COPYTABLE")
-            return std::make_unique<NopQuery>(); // Not implemented
+        if (query.token.front() == "COPYTABLE"){
+            auto &db = Database::getInstance();
+            db.updateFileTableName(query.token[2], query.token[1]);
+            return std::make_unique<CopyTableQuery>(
+                    query.token[1], query.token[2]
+            );
+            //return std::make_unique<NopQuery>(); // Not implemented
             //return std::make_unique<CopyTableQuery>(query.token[1], query.token[2]);
+        }
     }
     return this->nextBuilder->tryExtractQuery(query);
 }
