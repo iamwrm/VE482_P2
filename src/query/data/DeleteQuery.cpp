@@ -30,7 +30,8 @@ QueryResult::Ptr DeleteQuery::execute()
 		*/
 		auto result = initCondition(table);
 		if (result.second) {
-			for (auto it = table.begin(); it != table.end(); ++it) {
+			auto fixEnd = table.end();
+			for (auto it = table.begin(); it != fixEnd; ++it) {
 				if (this->evalCondition(*it)) {
 					/*
 					if (this->keyvalue.empty()) {
@@ -40,7 +41,8 @@ QueryResult::Ptr DeleteQuery::execute()
 						it->setkey(this->keyvalue);
 					}
 					*/
-					
+
+					//table.pub_erase(it);
 					table.deleteByIndex((*it).key());
 					++counter;
 				}
