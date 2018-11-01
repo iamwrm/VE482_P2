@@ -288,6 +288,15 @@ public:
      */
     void insertByIndex(KeyType key, std::vector<ValueType> &&data);
 
+
+    /**
+     * delete a row of data by its key
+     * @tparam ValueTypeContainer
+     * @param key
+     */
+    void deleteByIndex(KeyType key);
+    void pub_erase(Iterator );
+
     /**
      * Access the value according to the key
      * @param key

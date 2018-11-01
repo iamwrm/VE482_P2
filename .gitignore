@@ -3,6 +3,7 @@
 build_wr
 build_wr_docker
 wr_ms
+.vscode
 
 CMakeCache.txt
 CMakeFiles
