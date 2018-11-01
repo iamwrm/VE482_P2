@@ -1,5 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### CMake template
+build_docker
 build_wr
 build_wr_docker
 wr_ms
