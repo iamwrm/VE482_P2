@@ -5,8 +5,6 @@
 #include "SwapQuery.h"
 #include "../../db/Database.h"
 
-#include <iostream>
-
 constexpr const char *SwapQuery::qname;
 
 QueryResult::Ptr SwapQuery::execute()
@@ -21,24 +19,14 @@ QueryResult::Ptr SwapQuery::execute()
 	Table::SizeType counter = 0;
 	try {
 		auto &table = db[this->targetTable];
-		if (this->operands[0] == "KEY") {
-			this->keyValue_0 = this->operands[1];
-		} else {
-			this->fieldId_0 =
-			    table.getFieldIndex(this->operands[0]);
-			this->fieldId_1 =
-			    table.getFieldIndex(this->operands[1]);
-		}
+		this->fieldId_0 = table.getFieldIndex(this->operands[0]);
+		this->fieldId_1 = table.getFieldIndex(this->operands[1]);
 		auto result = initCondition(table);
 		if (result.second) {
 			for (auto it = table.begin(); it != table.end(); ++it) {
 				if (this->evalCondition(*it)) {
-					if (this->keyValue_0.empty()) {
-						swap((*it)[this->fieldId_0],
-						     (*it)[this->fieldId_1]);
-					} else {
-						it->setKey(this->keyValue_0);
-					}
+					swap((*it)[this->fieldId_0],
+					     (*it)[this->fieldId_1]);
 					++counter;
 				}
 			}
