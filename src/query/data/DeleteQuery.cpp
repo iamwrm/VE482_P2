@@ -32,7 +32,6 @@ QueryResult::Ptr DeleteQuery::execute()
 		*/
 		auto result = initCondition(table);
 		if (result.second) {
-			auto fixEnd = table.end();
 			auto it = table.begin();
 			while (it!=table.end()){
 				if (this->evalCondition(*it)) {

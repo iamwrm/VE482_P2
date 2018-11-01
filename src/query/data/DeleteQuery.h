@@ -9,9 +9,6 @@
 
 class DeleteQuery : public ComplexQuery {
 	static constexpr const char *qname = "DELETE";
-	Table::ValueType
-	    fieldValue;  // = (operands[0]=="KEY")? 0 :std::stoi(operands[1]);
-	Table::FieldIndex fieldId;
 	Table::KeyType keyValue;
 
        public:
