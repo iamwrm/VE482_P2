@@ -28,6 +28,7 @@ set(SOURCE_FILES
         query/data/SwapQuery.cpp query/data/SwapQuery.h
         query/data/DeleteQuery.cpp query/data/DeleteQuery.h
         query/data/MinQuery.cpp query/data/MinQuery.h
+        query/data/MaxQuery.cpp query/data/MaxQuery.h
         
         )
 add_executable(lemondb main.cpp ${SOURCE_FILES})
