@@ -16,6 +16,7 @@
 #include "data/InsertQuery.h"
 #include "data/UpdateQuery.h"
 #include "data/SwapQuery.h"
+#include "data/MinQuery.h"
 #include "data/DeleteQuery.h"
 
 #include <iomanip>
@@ -177,9 +178,8 @@ Query::Ptr ComplexQueryBuilder::tryExtractQuery(TokenizedQueryString &query) {
         /*return std::make_unique<SumQuery>(
                 this->targetTable, this->operandToken, this->conditionToken);*/
     if (operation == "MIN")
-        return std::make_unique<NopQuery>(); // Not implemented
-        /*return std::make_unique<MinQuery>(
-                this->targetTable, this->operandToken, this->conditionToken);*/
+        return std::make_unique<MinQuery>(
+                this->targetTable, this->operandToken, this->conditionToken);
     if (operation == "MAX")
         return std::make_unique<NopQuery>(); // Not implemented
         /*return std::make_unique<MaxQuery>(
