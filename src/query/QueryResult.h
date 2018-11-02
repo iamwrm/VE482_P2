@@ -76,14 +76,17 @@ protected:
 
 class SuccessMsgResult : public SuceededQueryResult {
     std::string msg;
+    bool isStdout;
 public:
-    bool display() override { return false; }
+    bool display() override { return isStdout; }
 
     explicit SuccessMsgResult(const int number) {
+        isStdout = true;
         this->msg = R"(Answer = "?".)"_f % number;
     }
 
     explicit SuccessMsgResult(std::vector<int> results) {
+        isStdout = true;
         std::stringstream ss;
         ss << "Answer = ( ";
         for (auto result : results) {
@@ -94,20 +97,24 @@ public:
     }
 
     explicit SuccessMsgResult(const char *qname) {
+        isStdout = false;
         this->msg = R"(Query "?" success.)"_f % qname;
     }
 
     SuccessMsgResult(const char *qname, const std::string &msg) {
+        isStdout = false;
         this->msg = R"(Query "?" success : ?)"_f % qname % msg;
     }
 
- explicit SuccessMsgResult(const std::string &outputString) {
+    explicit SuccessMsgResult(const std::string &outputString) {
+        isStdout = false;
         this->msg = outputString;
     }
 
     SuccessMsgResult(const char *qname,
                      const std::string &table,
                      const std::string &msg) {
+        isStdout = false;
         this->msg = R"(Query "?" success in Table "?" : ?)"_f
                     % qname % table % msg;
     }
