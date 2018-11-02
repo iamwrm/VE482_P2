@@ -24,6 +24,7 @@ QueryResult::Ptr DuplicateQuery::execute(){
             auto t1 = table.begin();
             auto t2 = table.end();
             for (auto it = t1; it != t2; ++it){
+                data.clear();
                 if (this->evalCondition(*it)){
                     Table::KeyType tmp = it->key();
                     Table::KeyType copykey = tmp + "_copy";

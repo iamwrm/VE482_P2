@@ -31,28 +31,15 @@ QueryResult::Ptr SelectQuery::execute()
 		for (int i = 1; (unsigned long)i < operands.size();  i++)
                     output[it->key()].push_back((*it)[operands[i]]);
 
-	    }
-	}
-
-		auto it = output.begin();
-        	if (it!=output.end()) {
-		    while (it != output.end()) {
-	       
-		        cout << "( " << (*it).first << " ";
-			cout.flush();
-		        for (int i = 0; (unsigned long)i < (*it).second.size(); i++) {
-		            cout << (*it).second[i] << " ";
- 			    cout.flush();
-		        }
-	 		cout.flush();
-		        cout << ")\n";
-	 		cout.flush();
-		        ++it;
-		    }   
-       		 }
-     }
-       
-        	return make_unique<NullQueryResult>();
+                outputStream << "( ? "_f % (*it).first;
+                for (int i = 0; (unsigned long)i < (*it).second.size(); i++)
+                    outputStream << (*it).second[i] << " ";
+                outputStream << ")";
+                ++it;
+            }
+            outputString = outputStream.str();
+        }
+        	return make_unique<SuccessMsgResult>(outputString, true);
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);

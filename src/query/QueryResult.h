@@ -82,7 +82,7 @@ public:
 
     explicit SuccessMsgResult(const int number) {
         isStdout = true;
-        this->msg = R"(ANSWER = "?".)"_f % number;
+        this->msg = R"(ANSWER = ?)"_f % number;
     }
 
     explicit SuccessMsgResult(const int number,int i) {
@@ -98,7 +98,7 @@ public:
         for (auto result : results) {
             ss << result << " ";
         }
-        ss << ")";
+        ss << ") ";
         this->msg = ss.str();
     }
 
@@ -112,8 +112,8 @@ public:
         this->msg = R"(Query "?" success : ?)"_f % qname % msg;
     }
 
-    explicit SuccessMsgResult(const std::string &outputString) {
-        isStdout = false;
+    SuccessMsgResult(const std::string &outputString, bool ifsuc) {
+        isStdout = ifsuc;
         this->msg = outputString;
     }
 
