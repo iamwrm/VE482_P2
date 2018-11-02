@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 
 std::unique_ptr<Database> Database::instance = nullptr;
 
