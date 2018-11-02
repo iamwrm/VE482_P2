@@ -9,8 +9,6 @@
 
 class SwapQuery : public ComplexQuery {
 	static constexpr const char *qname = "SWAP";
-	Table::ValueType
-	    fieldValue;  // = (operands[0]=="KEY")? 0 :std::stoi(operands[1]);
 	Table::FieldIndex fieldId_0;
 	Table::FieldIndex fieldId_1;
 
