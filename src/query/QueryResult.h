@@ -82,13 +82,13 @@ public:
 
     explicit SuccessMsgResult(const int number) {
         isStdout = true;
-        this->msg = R"(Answer = "?".)"_f % number;
+        this->msg = R"(ANSWER = "?".)"_f % number;
     }
 
     explicit SuccessMsgResult(std::vector<int> results) {
         isStdout = true;
         std::stringstream ss;
-        ss << "Answer = ( ";
+        ss << "ANSWER = ( ";
         for (auto result : results) {
             ss << result << " ";
         }
