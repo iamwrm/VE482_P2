@@ -101,6 +101,10 @@ public:
         this->msg = R"(Query "?" success : ?)"_f % qname % msg;
     }
 
+ explicit SuccessMsgResult(const std::string &outputString) {
+        this->msg = outputString;
+    }
+
     SuccessMsgResult(const char *qname,
                      const std::string &table,
                      const std::string &msg) {
