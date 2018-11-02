@@ -29,8 +29,12 @@ set(SOURCE_FILES
         query/data/DeleteQuery.cpp query/data/DeleteQuery.h
         query/data/MinQuery.cpp query/data/MinQuery.h
         query/data/MaxQuery.cpp query/data/MaxQuery.h
-        
 	query/data/SumQuery.cpp query/data/SumQuery.h
+	query/data/DuplicateQuery.cpp query/data/DuplicateQuery.h
+	query/data/AddQuery.cpp query/data/AddQuery.h
+	query/data/SubQuery.cpp query/data/SubQuery.h
+
+        
         )
 add_executable(lemondb main.cpp ${SOURCE_FILES})
 target_link_libraries(lemondb pthread)
