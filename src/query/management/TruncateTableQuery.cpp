@@ -13,12 +13,11 @@ std::string TruncateTableQuery::toString() {
 QueryResult::Ptr TruncateTableQuery::execute() {
     Database &db = Database::getInstance();
     try {
-        db.truncateTable(this->tableName);
+    	db[targetTable].clear();
+        return std::make_unique<SuccessMsgResult>(qname);
     }
     catch (const std::exception &e) {
         return std::make_unique<ErrorMsgResult>(qname, e.what());
     }
-
-    return std::make_unique<SuccessMsgResult>(qname);
-
+   
 }
