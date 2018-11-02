@@ -7,6 +7,10 @@
 
 constexpr const char *DropTableQuery::qname;
 
+std::string DropTableQuery::toString() {
+    return "QUERY = DROP, Table = \"" + targetTable + "\"";
+}
+
 QueryResult::Ptr DropTableQuery::execute() {
     using namespace std;
     Database &db = Database::getInstance();
@@ -18,8 +22,4 @@ QueryResult::Ptr DropTableQuery::execute() {
     } catch (const exception &e) {
         return make_unique<ErrorMsgResult>(qname, e.what());
     }
-}
-
-std::string DropTableQuery::toString() {
-    return "QUERY = DROP, Table = \"" + targetTable + "\"";
 }

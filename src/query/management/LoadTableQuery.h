@@ -8,6 +8,7 @@
 
 #include "../Query.h"
 
+
 class LoadTableQuery : public Query {
     static constexpr const char *qname = "LOAD";
     const std::string fileName;

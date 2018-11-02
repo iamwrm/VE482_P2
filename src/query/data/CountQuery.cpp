@@ -1,32 +1,31 @@
 //
-// Created by liu on 18-10-25.
+// Created by wwt on 11/1/18.
 //
 
-#include "InsertQuery.h"
-#include "../../db/Database.h"
-#include "../QueryResult.h"
+#include "CountQuery.h"
 
-#include <algorithm>
 
-constexpr const char *InsertQuery::qname;
+constexpr const char *CountQuery::qname;
 
-QueryResult::Ptr InsertQuery::execute() {
+std::string CountQuery::toString() {
+    return "QUERY = COUNT " + this->targetTable + "\"";
+}
+
+QueryResult::Ptr CountQuery::execute() {
     using namespace std;
-    if (this->operands.empty())
+    if (this->operands.size() != 0)
         return make_unique<ErrorMsgResult>(
                 qname, this->targetTable.c_str(),
-                "No operand (? operands)."_f % operands.size()
-        );
+                "Invalid number of operands (? operands)."_f % operands.size());
     Database &db = Database::getInstance();
     try {
         auto &table = db[this->targetTable];
-        auto &key = this->operands.front();
-        vector<Table::ValueType> data;
-        for_each(++this->operands.begin(), this->operands.end(), [&data](const string &item) {
-            data.emplace_back(strtol(item.c_str(), nullptr, 10));
-        });
-        table.insertByIndex(key, move(data));
-        return make_unique<NullQueryResult>();
+        int counter = 0;
+        for (auto object : table) {
+            if (myEvalCondition(condition, object))
+                counter++;
+        }
+        return make_unique<SuccessMsgResult>(counter);
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);
@@ -38,8 +37,4 @@ QueryResult::Ptr InsertQuery::execute() {
     } catch (const exception &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "Unkonwn error '?'."_f % e.what());
     }
-}
-
-std::string InsertQuery::toString() {
-    return "QUERY = INSERT " + this->targetTable + "\"";
 }

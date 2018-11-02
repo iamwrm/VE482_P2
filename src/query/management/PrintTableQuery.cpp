@@ -11,8 +11,8 @@ constexpr const char *PrintTableQuery::qname;
 
 QueryResult::Ptr PrintTableQuery::execute() {
     using namespace std;
-    Database &db = Database::getInstance();
     try {
+        Database &db = Database::getInstance();
         auto &table = db[this->targetTable];
         cout << "================\n";
         cout << "TABLE = ";

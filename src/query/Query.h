@@ -89,6 +89,8 @@ public:
      */
     bool testKeyCondition(Table &table, std::function<void(bool, Table::Object::Ptr &&)> function);
 
+    bool myEvalCondition(const std::vector<QueryCondition>& conditions,
+                         const Table::Object& object);
 
     ComplexQuery(std::string targetTable,
                  std::vector<std::string> operands,
@@ -104,5 +106,6 @@ public:
     /** Get condition in the query, seems no use now */
     const std::vector<QueryCondition> &getCondition() { return condition; }
 };
+
 
 #endif //PROJECT_QUERY_H

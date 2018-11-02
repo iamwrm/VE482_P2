@@ -18,22 +18,15 @@ public:
 
     virtual bool success() = 0;
 
-    virtual bool display() = 0;
+    virtual std::string toString() = 0;
 
     virtual ~QueryResult() = default;
-
-    friend std::ostream &operator<<(std::ostream &os, const QueryResult &table);
-
-protected:
-    virtual std::ostream &output(std::ostream &os) const = 0;
 };
 
 class FailedQueryResult : public QueryResult {
     const std::string data;
 public:
     bool success() override { return false; }
-
-    bool display() override { return false; }
 };
 
 class SuceededQueryResult : public QueryResult {
@@ -43,19 +36,14 @@ public:
 
 class NullQueryResult : public SuceededQueryResult {
 public:
-    bool display() override { return false; }
-
-protected:
-    std::ostream &output(std::ostream &os) const override {
-        return os << "\n";
+    std::string toString() override {
+        return std::string();
     }
 };
 
 class ErrorMsgResult : public FailedQueryResult {
     std::string msg;
 public:
-    bool display() override { return false; }
-
     ErrorMsgResult(const char *qname,
                    const std::string &msg) {
         this->msg = R"(Query "?" failed : ?)"_f % qname % msg;
@@ -68,16 +56,14 @@ public:
                 R"(Query "?" failed in Table "?" : ?)"_f % qname % table % msg;
     }
 
-protected:
-    std::ostream &output(std::ostream &os) const override {
-        return os << msg << "\n";
+    std::string toString() override {
+        return msg;
     }
 };
 
 class SuccessMsgResult : public SuceededQueryResult {
     std::string msg;
 public:
-    bool display() override { return false; }
 
     explicit SuccessMsgResult(const int number) {
         this->msg = R"(Answer = "?".)"_f % number;
@@ -108,22 +94,22 @@ public:
                     % qname % table % msg;
     }
 
-protected:
-    std::ostream &output(std::ostream &os) const override {
-        return os << msg << "\n";
+    explicit SuccessMsgResult(const std::string &outputString) {
+        this->msg = outputString;
+    }
+
+    std::string toString() override {
+        return msg;
     }
 };
 
 class RecordCountResult : public SuceededQueryResult {
     const int affectedRows;
 public:
-    bool display() override { return true; }
-
     explicit RecordCountResult(int count) : affectedRows(count) {}
 
-protected:
-    std::ostream &output(std::ostream &os) const override {
-        return os << "Affected ? rows."_f % affectedRows << "\n";
+    std::string toString() override {
+        return "Affected ? rows."_f % affectedRows;
     }
 };
 
