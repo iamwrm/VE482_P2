@@ -7,7 +7,6 @@
 
 constexpr const char *CountQuery::qname;
 
-
 std::string CountQuery::toString() {
     return "QUERY = COUNT " + this->targetTable + "\"";
 }
@@ -19,21 +18,20 @@ QueryResult::Ptr CountQuery::execute() {
                 qname, this->targetTable.c_str(),
                 "Invalid number of operands (? operands)."_f % operands.size());
     Database &db = Database::getInstance();
+	Table::SizeType counter = 0;
     try {
-        auto &table = db[this->targetTable];
-        auto result = initCondition(table);
-    int counter=0;
-    if (result.second) {
-        for (auto it = table.begin(); it != table.end(); ++it) {
-            if (this->evalCondition(*it)) {
-               counter++;
-            }
-        }
-    }
-    cout.flush();
-    cout<<"ANSWER = "<<counter<<endl;
-    cout.flush();
-        return make_unique<NullQueryResult>();
+    auto &table = db[this->targetTable];
+	auto result = initCondition(table);
+	if (result.second) {
+		auto it = table.begin();
+		while (it != table.end()) {
+			if (this->evalCondition(*it)) {
+				++counter;
+			}
+			it++;
+		}
+	}
+	return make_unique<SuccessMsgResult>(counter);
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);

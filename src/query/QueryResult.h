@@ -76,16 +76,19 @@ protected:
 
 class SuccessMsgResult : public SuceededQueryResult {
     std::string msg;
+    bool isStdout;
 public:
-    bool display() override { return false; }
+    bool display() override { return isStdout; }
 
     explicit SuccessMsgResult(const int number) {
-        this->msg = R"(Answer = "?".)"_f % number;
+        isStdout = true;
+        this->msg = R"(ANSWER = "?".)"_f % number;
     }
 
     explicit SuccessMsgResult(std::vector<int> results) {
+        isStdout = true;
         std::stringstream ss;
-        ss << "Answer = ( ";
+        ss << "ANSWER = ( ";
         for (auto result : results) {
             ss << result << " ";
         }
@@ -94,20 +97,24 @@ public:
     }
 
     explicit SuccessMsgResult(const char *qname) {
+        isStdout = false;
         this->msg = R"(Query "?" success.)"_f % qname;
     }
 
     SuccessMsgResult(const char *qname, const std::string &msg) {
+        isStdout = false;
         this->msg = R"(Query "?" success : ?)"_f % qname % msg;
     }
 
- explicit SuccessMsgResult(const std::string &outputString) {
+    explicit SuccessMsgResult(const std::string &outputString) {
+        isStdout = false;
         this->msg = outputString;
     }
 
     SuccessMsgResult(const char *qname,
                      const std::string &table,
                      const std::string &msg) {
+        isStdout = false;
         this->msg = R"(Query "?" success in Table "?" : ?)"_f
                     % qname % table % msg;
     }
@@ -130,18 +137,5 @@ protected:
         return os << "Affected ? rows."_f % affectedRows << "\n";
     }
 };
-
-
-//class CounterResult : public SuccessMsgResult {
-//public:
-//    bool display() override { return true; }
-//};
-
-
-//class SelectResult : public SuccessMsgResult {
-//public:
-//    bool display() override { return true; }
-//};
-
 
 #endif //PROJECT_QUERYRESULT_H

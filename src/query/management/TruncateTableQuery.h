@@ -12,10 +12,14 @@
 
 class TruncateTableQuery : public Query {
     static constexpr const char* qname = "TRUNCATE";
+    const std::string tableName;
 
 public:
-    using Query::Query;
+    explicit TruncateTableQuery(std::string table) :
+        tableName(std::move(table)) {}
+
     QueryResult::Ptr execute() override;
+
     std::string toString() override;
 };
 
