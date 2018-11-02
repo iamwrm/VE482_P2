@@ -6,7 +6,6 @@
 
 constexpr const char *SelectQuery::qname;
 
-std::bool SelectQuery::display() { return true;}
 
 std::string SelectQuery::toString()
 {
@@ -23,34 +22,27 @@ QueryResult::Ptr SelectQuery::execute()
                 "Invalid number of operands (? operands)."_f % operands.size());
     Database &db = Database::getInstance();
     try {
-        auto &table = db[this->targetTable];
-        map<string, vector<int>> output;
-        for (auto object : table) {
-            if (myEvalCondition(condition, object)) {
-                output[object.key()] = vector<int>();
-                for (int i = 1; (unsigned long)i < operands.size();  i++)
-                    output[object.key()].push_back(object[operands[i]]);
+ 	auto &table = db[this->targetTable];
+	auto result = initCondition(table);
+    if (result.second) {
+        for (auto it = table.begin(); it != table.end(); ++it) {
+            if (this->evalCondition(*it)) {
+                cout.flush();
+                cout << "( " << it->key();
+                cout.flush();
+                for (size_t i = 1; i < operands.size(); i++) {
+                    cout.flush();
+                    cout << " " << (*it)[operands[i]];
+                    cout.flush();
+                }
+                cout.flush();
+                cout << " )\n";
+                cout.flush();
             }
         }
-        auto it = output.begin();
-        if (it!=output.end()) {
-            ostringstream outputStream;
-            int flag = 0;
-            while (it != output.end()) {
-                if (flag == 0)
-                    flag = 1;
-                else
-                    outputStream << "\n";
-
-                outputStream << "( ? "_f % (*it).first;
-                for (int i = 0; (unsigned long)i < (*it).second.size(); i++)
-                    outputStream << (*it).second[i] << " ";
-                outputStream << ")";
-                ++it;
-            }
-            outputString = outputStream.str();
-        }
-        	return make_unique<SuccessMsgResult>(outputString);
+    }
+       
+        	return make_unique<NullQueryResult>();
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);

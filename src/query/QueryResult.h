@@ -131,4 +131,17 @@ protected:
     }
 };
 
+
+//class CounterResult : public SuccessMsgResult {
+//public:
+//    bool display() override { return true; }
+//};
+
+
+//class SelectResult : public SuccessMsgResult {
+//public:
+//    bool display() override { return true; }
+//};
+
+
 #endif //PROJECT_QUERYRESULT_H
