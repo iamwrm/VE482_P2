@@ -11,9 +11,12 @@
 #include "management/ListTableQuery.h"
 #include "management/QuitQuery.h"
 #include "management/PrintTableQuery.h"
+#include "management/TruncateTableQuery.h"
 
 #include "data/InsertQuery.h"
 #include "data/UpdateQuery.h"
+#include "data/SelectQuery.h"
+#include "data/CountQuery.h"
 
 #include <iomanip>
 #include <iostream>
@@ -45,8 +48,7 @@ Query::Ptr ManageTableQueryBuilder::tryExtractQuery
         if (query.token.front() == "DROP")
             return std::make_unique<DropTableQuery>(query.token[1]);
         if (query.token.front() == "TRUNCATE")
-            return std::make_unique<NopQuery>(); // Not implemented
-            //return std::make_unique<TruncateTableQuery>(query.token[1]);
+            return std::make_unique<TruncateTableQuery>(query.token[1]);
     }
     if (query.token.size() == 3) {
         if (query.token.front() == "DUMP") {
@@ -151,9 +153,8 @@ Query::Ptr ComplexQueryBuilder::tryExtractQuery(TokenizedQueryString &query) {
         return std::make_unique<UpdateQuery>(
                 this->targetTable, this->operandToken, this->conditionToken);
     if (operation == "SELECT")
-        return std::make_unique<NopQuery>(); // Not implemented
-        /*return std::make_unique<SelectQuery>(
-                this->targetTable, this->operandToken, this->conditionToken);*/
+        return std::make_unique<SelectQuery>(
+                this->targetTable, this->operandToken, this->conditionToken);
     if (operation == "DELETE")
         return std::make_unique<NopQuery>(); // Not implemented
         /*return std::make_unique<DeleteQuery>(
@@ -163,9 +164,8 @@ Query::Ptr ComplexQueryBuilder::tryExtractQuery(TokenizedQueryString &query) {
         /*return std::make_unique<DuplicateQuery>(
                 this->targetTable, this->operandToken, this->conditionToken);*/
     if (operation == "COUNT")
-        return std::make_unique<NopQuery>(); // Not implemented
-        /*return std::make_unique<CountQuery>(
-                this->targetTable, this->operandToken, this->conditionToken);*/
+        return std::make_unique<CountQuery>(
+                this->targetTable, this->operandToken, this->conditionToken);
     if (operation == "SUM")
         return std::make_unique<NopQuery>(); // Not implemented
         /*return std::make_unique<SumQuery>(

@@ -14,7 +14,7 @@
 #include <vector>
 #include <unordered_map>
 #include <utility>
-
+#include <unordered_set>
 
 #define _DBTABLE_ACCESS_WITH_NAME_EXCEPTION(field)\
 do {\
@@ -92,6 +92,7 @@ private:
 
     /** The name of table */
     std::string tableName;
+    std::unordered_set<KeyType> keySet;
 
 public:
     typedef std::unique_ptr<Table> Ptr;
@@ -367,6 +368,15 @@ public:
      * @return the origin ostream
      */
     friend std::ostream &operator<<(std::ostream &os, const Table &table);
+
+////////////////////////
+    Iterator erase(Iterator it)
+    {
+        this->keySet.erase(it.it->key);
+        return Iterator(this->data.erase(it.it), it.table);
+    }
+
+
 };
 
 std::ostream &operator<<(std::ostream &os, const Table &table);
