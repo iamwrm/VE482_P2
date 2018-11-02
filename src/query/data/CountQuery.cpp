@@ -18,14 +18,20 @@ QueryResult::Ptr CountQuery::execute() {
                 qname, this->targetTable.c_str(),
                 "Invalid number of operands (? operands)."_f % operands.size());
     Database &db = Database::getInstance();
+	Table::SizeType counter = 0;
     try {
-        auto &table = db[this->targetTable];
-        int counter = 0;
-        for (auto object : table) {
-            if (myEvalCondition(condition, object))
-                counter++;
-        }
-        return make_unique<SuccessMsgResult>(counter);
+    auto &table = db[this->targetTable];
+	auto result = initCondition(table);
+	if (result.second) {
+		auto it = table.begin();
+		while (it != table.end()) {
+			if (this->evalCondition(*it)) {
+				++counter;
+			}
+			it++;
+		}
+	}
+	return make_unique<SuccessMsgResult>(counter);
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);
