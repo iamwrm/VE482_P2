@@ -23,6 +23,9 @@ set(SOURCE_FILES
 
         query/data/InsertQuery.cpp query/data/InsertQuery.h
         query/data/UpdateQuery.cpp query/data/UpdateQuery.h
+	query/data/DuplicateQuery.cpp query/data/DuplicateQuery.h
+	query/data/AddQuery.cpp query/data/AddQuery.h
+	query/data/SubQuery.cpp query/data/SubQuery.h
         )
 add_executable(lemondb main.cpp ${SOURCE_FILES})
 target_link_libraries(lemondb pthread)
