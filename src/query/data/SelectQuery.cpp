@@ -48,7 +48,7 @@ QueryResult::Ptr SelectQuery::execute()
             }
             outputString = outputStream.str();
         }
-        	return make_unique<SuccessMsgResult>(outputString);
+        	return make_unique<SuccessMsgResult>(outputString, true);
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);
