@@ -7,6 +7,8 @@
 
 constexpr const char *CountQuery::qname;
 
+std::bool CountQuery::display() { return true;}
+
 std::string CountQuery::toString() {
     return "QUERY = COUNT " + this->targetTable + "\"";
 }

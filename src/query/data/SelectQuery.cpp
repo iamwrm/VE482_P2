@@ -6,6 +6,8 @@
 
 constexpr const char *SelectQuery::qname;
 
+std::bool SelectQuery::display() { return true;}
+
 std::string SelectQuery::toString()
 {
     return "QUERY = SELECT " + this->targetTable + "\"";

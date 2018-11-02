@@ -18,6 +18,7 @@ public:
     using ComplexQuery::ComplexQuery;
     QueryResult::Ptr execute() override;
     std::string toString() override;
+    bool display() override;
 };
 
 #endif //PROJECT_COUNTQUERY_H
