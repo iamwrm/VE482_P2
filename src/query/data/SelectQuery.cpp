@@ -24,23 +24,34 @@ QueryResult::Ptr SelectQuery::execute()
     try {
  	auto &table = db[this->targetTable];
 	auto result = initCondition(table);
+	map<string, vector<int>> output;
     if (result.second) {
         for (auto it = table.begin(); it != table.end(); ++it) {
             if (this->evalCondition(*it)) {
-                cout.flush();
-                cout << "( " << it->key();
-                cout.flush();
-                for (size_t i = 1; i < operands.size(); i++) {
-                    cout.flush();
-                    cout << " " << (*it)[operands[i]];
-                    cout.flush();
-                }
-                cout.flush();
-                cout << " )\n";
-                cout.flush();
-            }
-        }
-    }
+		output[it->key()] = vector<int>();
+		for (int i = 1; (unsigned long)i < operands.size();  i++)
+                    output[it->key()].push_back((*it)[operands[i]]);
+
+	    }
+	}
+
+		auto it = output.begin();
+        	if (it!=output.end()) {
+		    while (it != output.end()) {
+	       
+		        cout << "( " << (*it).first << " ";
+			cout.flush();
+		        for (int i = 0; (unsigned long)i < (*it).second.size(); i++) {
+		            cout << (*it).second[i] << " ";
+ 			    cout.flush();
+		        }
+	 		cout.flush();
+		        cout << ")\n";
+	 		cout.flush();
+		        ++it;
+		    }   
+       		 }
+     }
        
         	return make_unique<NullQueryResult>();
     }

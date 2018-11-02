@@ -18,6 +18,6 @@ QueryResult::Ptr TruncateTableQuery::execute() {
     }
     catch (const std::exception &e) {
         return std::make_unique<ErrorMsgResult>(qname, e.what());
-   
+   }
     return make_unique<NullQueryResult>();
 }
