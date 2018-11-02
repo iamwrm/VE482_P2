@@ -85,6 +85,12 @@ public:
         this->msg = R"(ANSWER = "?".)"_f % number;
     }
 
+    explicit SuccessMsgResult(const int number,int i) {
+        // used by CountQuery
+        isStdout = true;
+        this->msg = R"(ANSWER = ?)"_f % number;
+    }
+
     explicit SuccessMsgResult(std::vector<int> results) {
         isStdout = true;
         std::stringstream ss;
