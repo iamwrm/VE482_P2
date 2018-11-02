@@ -21,15 +21,24 @@ QueryResult::Ptr SelectQuery::execute()
                 "Invalid number of operands (? operands)."_f % operands.size());
     Database &db = Database::getInstance();
     try {
- 	auto &table = db[this->targetTable];
-	auto result = initCondition(table);
-	map<string, vector<int>> output;
-    if (result.second) {
-        for (auto it = table.begin(); it != table.end(); ++it) {
-            if (this->evalCondition(*it)) {
-		output[it->key()] = vector<int>();
-		for (int i = 1; (unsigned long)i < operands.size();  i++)
-                    output[it->key()].push_back((*it)[operands[i]]);
+        auto &table = db[this->targetTable];
+        map<string, vector<int>> output;
+        for (auto object : table) {
+            if (myEvalCondition(condition, object)) {
+                output[object.key()] = vector<int>();
+                for (int i = 1; (unsigned long)i < operands.size();  i++)
+                    output[object.key()].push_back(object[operands[i]]);
+            }
+        }
+        auto it = output.begin();
+        if (it!=output.end()) {
+            ostringstream outputStream;
+            int flag = 0;
+            while (it != output.end()) {
+                if (flag == 0)
+                    flag = 1;
+                else
+                    outputStream << "\n";
 
                 outputStream << "( ? "_f % (*it).first;
                 for (int i = 0; (unsigned long)i < (*it).second.size(); i++)
