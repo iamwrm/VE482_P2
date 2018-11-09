@@ -33,8 +33,6 @@ private:
     Database() = default;
 
 public:
-    void truncateTable(std::string tableName);
-
     void testDuplicate(const std::string &tableName);
 
     Table &registerTable(Table::Ptr &&table);

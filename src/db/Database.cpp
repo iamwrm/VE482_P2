@@ -195,16 +195,4 @@ void Database::exit() {
     std::exit(0);
 }
 
-///////////////////////
 
-void Database::truncateTable(std::string tableName)
-{
-    auto it = this->tables.find(tableName);
-    if (it == this->tables.end())
-        throw TableNameNotFound(
-                "Error when trying to truncate table \"" + tableName + "\". Table not found.");
-    Database &db = Database::getInstance();
-    auto  &table = db[tableName];
-    for (Table::Iterator i = table.begin(); i != table.end(); i = table.begin())
-        table.erase(i);
-}

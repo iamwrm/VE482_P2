@@ -23,13 +23,17 @@ QueryResult::Ptr SelectQuery::execute()
     try {
         auto &table = db[this->targetTable];
         map<string, vector<int>> output;
-        for (auto object : table) {
-            if (myEvalCondition(condition, object)) {
-                output[object.key()] = vector<int>();
-                for (int i = 1; (unsigned long)i < operands.size();  i++)
-                    output[object.key()].push_back(object[operands[i]]);
-            }
-        }
+		auto result = initCondition(table);
+		if (result.second) {
+			for (auto it = table.begin(); it != table.end(); it++) {
+				if (this->evalCondition(*it)) {
+					output[it->key()] = vector<int>();
+					for (int i = 1; (unsigned long)i < operands.size(); i++)
+						output[it->key()].push_back((*it)[operands[i]]);
+				}
+			}
+		}
+
         auto it = output.begin();
         if (it!=output.end()) {
             ostringstream outputStream;
@@ -48,7 +52,7 @@ QueryResult::Ptr SelectQuery::execute()
             }
             outputString = outputStream.str();
         }
-        	return make_unique<SuccessMsgResult>(outputString, true);
+        	return make_unique<SuccessMsgResult>(std::move(outputString));
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);
