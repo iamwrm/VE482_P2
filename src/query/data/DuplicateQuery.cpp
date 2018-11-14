@@ -17,38 +17,37 @@ QueryResult::Ptr DuplicateQuery::execute(){
     try{
         auto &table = db[this->targetTable];
         auto result = initCondition(table);
-        vector<Table::ValueType> data;
-        Table::SizeType counter = 0, sz = table.field().size();
-        data.reserve(sz);
-        if (result.second){
-            auto t1 = table.begin();
-            auto t2 = table.end();
-            for (auto it = t1; it != t2; ++it){
-                data.clear();
-                if (this->evalCondition(*it)){
-                    Table::KeyType tmp = it->key();
-                    Table::KeyType copykey = tmp + "_copy";
-                    //cout<<copykey<<endl;
-                    //search copy for the key
-                    bool iscopied = false;
-                    for (auto it2 = it; it2 != table.end(); ++it2){
-                        if (it2->key() == copykey){
-                            iscopied = true;
-                            break;
-                        }   
-                    }
-                    if (iscopied) continue;
-                    //if there are no copy, insert a copy
-                    for (unsigned int i = 0; i < sz; i++){
-                        data.push_back((*it)[i]);
-                    }
-                    table.insertByIndex(copykey, move(data));
-                    counter++;
-                    //printf("key: %s%d\n", (string)(it->key()), (*it)[1]);
+        vector<decltype(*(table.begin()))>  v_to_be_inserted;
+    	Table::SizeType counter = 0, sz = table.field().size();
+
+	if (result.second){
+        auto t1 = table.begin();
+        auto t2 = table.end();
+        auto original_size = table.size();
+	    for (decltype(table.size()) i = 0; i < original_size; i++) {
+		    auto it = table.begin() + i;
+		    if (this->evalCondition(*(it))) {
+			    Table::KeyType tmp = it->key();
+			    Table::KeyType copykey = tmp + "_copy";
+
+			    // search copy for the key
+			    // Added by Wang =====
+		        if (table.checkKeyExistence(copykey)) {
+			       continue;
+		        }
+		        // ===================
+		        // if there are no copy, insert a copy
+		        vector<Table::ValueType> new_data;
+		        new_data.clear();
+		        for (unsigned int i = 0; i < sz; i++) {
+			       new_data.push_back((*it)[i]);
+		        }
+
+		        table.insertByIndex(copykey, std::move(new_data));
+		        counter++;
                 }
             }
         }
-        //db.printAllTable();
         return make_unique<RecordCountResult>(counter);
     }
     catch (const TableNameNotFound &e) {

@@ -298,6 +298,7 @@ public:
      */
     void deleteByIndex(KeyType key);
 
+
     Iterator pub_erase(Iterator it_input ){
         this->keyMap.erase(it_input.it->key);
         return Iterator(this->data.erase(it_input.it),it_input.table);
@@ -383,6 +384,8 @@ public:
      */
     friend std::ostream &operator<<(std::ostream &os, const Table &table);
 
+    // added by Wang 
+    bool checkKeyExistence(KeyType key);
 
 };
 

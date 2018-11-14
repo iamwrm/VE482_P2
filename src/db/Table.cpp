@@ -80,3 +80,13 @@ std::ostream &operator<<(std::ostream &os, const Table &table) {
     }
     return os << buffer.str();
 }
+
+// added by wang
+bool Table::checkKeyExistence(KeyType key) {
+	if (this->keyMap.find(key) == this->keyMap.end()) {
+		return false;
+		// no this key
+	} else {
+		return true;
+	}
+}
