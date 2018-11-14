@@ -81,10 +81,6 @@ public:
     bool evalCondition(const Table::Object &object);
 
 
-///////////////
-bool myEvalCondition(const std::vector<QueryCondition>& conditions,
-                         const Table::Object& object);
-
     /**
      * This function seems have small effect and causes somme bugs
      * so it is not used actually

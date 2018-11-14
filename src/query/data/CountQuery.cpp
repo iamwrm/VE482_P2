@@ -26,12 +26,12 @@ QueryResult::Ptr CountQuery::execute() {
 		auto it = table.begin();
 		while (it != table.end()) {
 			if (this->evalCondition(*it)) {
-				++counter;
+				counter++;
 			}
 			it++;
 		}
 	}
-	return make_unique<SuccessMsgResult>(counter,1);
+	return make_unique<SuccessMsgResult>(counter);
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);
