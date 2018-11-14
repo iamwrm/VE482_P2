@@ -1,8 +1,9 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### CMake template
-build_docker
-build_wr
-build_wr_docker
+.DS_Store
+lemondb
+build_ubuntu
+build_darwin
 wr_ms
 .vscode
 
