@@ -89,6 +89,10 @@ public:
     explicit SuccessMsgResult(std::vector<int> results) {
         isStdout = true;
         std::stringstream ss;
+        if (results.empty()){
+        isStdout = false;
+        return;
+        }
         ss << "ANSWER = ( ";
         for (auto result : results) {
             ss << result << " ";
@@ -108,6 +112,16 @@ public:
     }
 
     SuccessMsgResult(const std::string &outputString) {
+        isStdout = true;
+        this->msg = outputString;
+    }
+
+    // do not delete this  by Wang Ren 
+    SuccessMsgResult(const std::string &outputString, int i) {
+        if (outputString.empty()){
+        isStdout = false;
+        return;
+        }
         isStdout = true;
         this->msg = outputString;
     }

@@ -52,7 +52,7 @@ QueryResult::Ptr SelectQuery::execute()
             }
             outputString = outputStream.str();
         }
-        	return make_unique<SuccessMsgResult>(std::move(outputString));
+        	return make_unique<SuccessMsgResult>(std::move(outputString),1);
     }
     catch (const TableNameNotFound &e) {
         return make_unique<ErrorMsgResult>(qname, this->targetTable, "No such table."s);
