@@ -3,6 +3,9 @@
 build_docker
 build_wr
 build_wr_docker
+build_ubuntu
+build_darwin
+
 wr_ms
 .vscode
 
