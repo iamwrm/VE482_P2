@@ -30,7 +30,6 @@ QueryResult::Ptr UpdateQuery::execute() {
                 if (this->evalCondition(*it)) {
                     if (this->keyValue.empty()) {
                         (*it)[this->fieldId] = this->fieldValue;
-                        //printf("%d\n", (int)this->fieldId);
                     } else {
                         it->setKey(this->keyValue);
                     }

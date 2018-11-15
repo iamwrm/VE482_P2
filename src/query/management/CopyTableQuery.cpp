@@ -33,5 +33,5 @@ QueryResult::Ptr CopyTableQuery::execute()
 
 std::string CopyTableQuery::toString()
 {
-	return "QUERY = Copy TABLE, FILE = \"" + this->fileName + "\"";
+	return "QUERY = Copy TABLE, from = \"" + targetTable+ "\", FILE = \""+ this->fileName + "\"";
 }

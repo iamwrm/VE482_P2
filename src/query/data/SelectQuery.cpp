@@ -52,6 +52,7 @@ QueryResult::Ptr SelectQuery::execute()
             }
             outputString = outputStream.str();
         }
+            // use this to differ from the original SuccessMsgResult( string)
         	return make_unique<SuccessMsgResult>(std::move(outputString),1);
     }
     catch (const TableNameNotFound &e) {

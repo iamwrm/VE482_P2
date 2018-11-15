@@ -19,7 +19,7 @@ QueryResult::Ptr AddQuery::execute(){
         auto &table = db[this->targetTable];
         fieldids.reserve(this->operands.size());
         for(Table::FieldIndex i = 0; i < (Table::FieldIndex)this->operands.size(); ++i){
-            fieldids.push_back(table.getFieldIndex(this->operands[i]));
+            fieldids.emplace_back(std::move(table.getFieldIndex(this->operands[i])));
         }
         Table::SizeType counter = 0;
         auto result = initCondition(table);

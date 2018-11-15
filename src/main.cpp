@@ -7,8 +7,14 @@
 
 #include <getopt.h>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <string>
+#include <thread>
+
+using std::string;
+using std::endl;
+
 
 struct {
     std::string listen;
@@ -80,8 +86,9 @@ int main(int argc, char *argv[]) {
         std::cerr << "lemondb: error: threads num can not be negative value " << parsedArgs.threads << std::endl;
         exit(-1);
     } else if (parsedArgs.threads == 0) {
-        // @TODO Auto detect the thread num
-        std::cerr << "lemondb: info: auto detect thread num" << std::endl;
+        // DONE: get thread num from system
+        parsedArgs.threads = std::thread::hardware_concurrency();
+        std::cerr << "lemondb: info: auto detect thread num "<< parsedArgs.threads << std::endl;
     } else {
         std::cerr << "lemondb: info: running in " << parsedArgs.threads << " threads" << std::endl;
     }
