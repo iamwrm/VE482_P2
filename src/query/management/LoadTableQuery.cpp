@@ -26,5 +26,5 @@ QueryResult::Ptr LoadTableQuery::execute() {
 }
 
 std::string LoadTableQuery::toString() {
-    return "QUERY = Load TABLE, FILE = \"" + this->fileName + "\"";
+    return "QUERY = Load TABLE \"" + this->targetTable + "\", FILE = \"" + this->fileName + "\"";
 }

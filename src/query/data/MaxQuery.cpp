@@ -80,5 +80,5 @@ QueryResult::Ptr MaxQuery::execute()
 
 std::string MaxQuery::toString()
 {
-	return "QUERY = MIN " + this->targetTable + "\"";
+	return "QUERY = MAX " + this->targetTable + "\"";
 }

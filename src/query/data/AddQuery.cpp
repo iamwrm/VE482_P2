@@ -50,5 +50,5 @@ QueryResult::Ptr AddQuery::execute(){
 }
 
 std::string AddQuery::toString() {
-    return "QUERY = SUM " + this->targetTable + "\"";
+    return "QUERY = ADD " + this->targetTable + "\"";
 }
