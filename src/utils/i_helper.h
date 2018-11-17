@@ -4,14 +4,16 @@
 #include "../query/QueryParser.h"
 
 #include <getopt.h>
+#include <unistd.h>
+#include <condition_variable>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
-
-
+//#include <pair>
 
 struct inf_qry {
 	bool read;
@@ -22,7 +24,18 @@ struct inf_qry {
 	int line;
 };
 
-inf_qry getInformation(std::string qry, int &count);
 
+struct one_table_query {
+	//std::string table_name;
+	std::vector<inf_qry> query_data;
+};
+
+struct Query_queue_arr {
+	std::map<std::string, int> table_name;
+
+	std::vector<one_table_query> arr;
+};
+
+inf_qry getInformation(std::string qry, int &count);
 
 #endif  // !I_HELPER_H

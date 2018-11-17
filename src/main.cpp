@@ -6,16 +6,6 @@
 #include "query/QueryBuilders.h"
 #include "utils/i_helper.h"
 
-#include <getopt.h>
-#include <fstream>
-#include <iostream>
-#include <mutex>
-#include <sstream>
-#include <string>
-#include <thread>
-#include <map>
-#include <condition_variable>
-#include <unistd.h>
 
 using std::string;
 using std::endl;
@@ -24,22 +14,15 @@ using std::vector;
 
 std::mutex mtx_query_queue;
 std::mutex mtx_query_queue_property;
+
 std::mutex mtx_query_queue_arr;
 
 std::condition_variable  threadLimit;
 
+std::vector<std::mutex> query_arr_mtx;
 
-struct Query_queue_arr{
-    std::map< std::string, int > table_name;
 
-    std::vector<one_table_query> arr;
-};
 
-struct one_table_query{
-    std::string table_name;
-    std::mutex mtx;
-    std::vector<Query::Ptr> query_data;
-};
 
 struct {
     std::string listen;
@@ -97,7 +80,7 @@ std::string extractQueryString(std::istream &is) {
 void qq_reader(std::istream &is, QueryParser &p,
 	       std::vector<Query::Ptr> &query_queue,
 	       std::vector<inf_qry> &query_queue_property,
-	       Query_queue_arr query_queue_arr)
+	       Query_queue_arr &query_queue_arr)
 {
     // This function is in the main thread
     //
@@ -112,22 +95,56 @@ void qq_reader(std::istream &is, QueryParser &p,
 			query_queue.emplace_back(std::move(query));
 			mtx_query_queue.unlock();
 
+            // ==============================
 			mtx_query_queue_property.lock();
+
 			query_queue_property.emplace_back(
 			    std::move(getInformation(
 				query_queue[query_queue.size() - 1]->toString(),
 				count_for_getInformation)));
+
+			inf_qry local_inf_qry = getInformation(
+			    query_queue[query_queue.size() - 1]->toString(),
+			    count_for_getInformation);
+
 			mtx_query_queue_property.unlock();
+            // ==============================
 
+			mtx_query_queue_arr.lock();
+			if (query_queue_arr.table_name.find(
+				local_inf_qry.targetTable) !=
+			    query_queue_arr.table_name.end()) {
+				auto it = query_queue_arr.table_name.find(
+				    local_inf_qry.targetTable);
 
+				query_queue_arr.arr[it->second]
+				    .query_data.emplace_back(
+					std::move(local_inf_qry));
+				// find the table name
+			}
+            else{
+                // new table name
+                query_queue_arr.arr.emplace_back(std::move(one_table_query()));
+                // just inserted index
+                int jii = query_queue_arr.arr.size()-1;
 
-            // count for how many query information has been stored
+                query_queue_arr.table_name.insert(std::pair<std::string,int> (
+                local_inf_qry.targetTable,jii
+                ));
+
+                query_queue_arr.arr[jii].query_data.emplace_back(std::move(local_inf_qry));
+
+                
+            }
+			mtx_query_queue_arr.unlock();
+
+			// count for how many query information has been stored
 			mtx_count_for_getInformation.lock();
 			count_for_getInformation++;  // record the line of query
 			mtx_count_for_getInformation.unlock();
 
-			std::cout << "in qq:" << count_for_getInformation
-				  << endl;
+			//std::cout << "in qq:" << count_for_getInformation
+			//	  << endl;
 
 
 			threadLimit.notify_one();
@@ -163,7 +180,9 @@ void result_reader()
 		std::unique_lock<std::mutex> lock(mtx_count_for_getInformation);
 		if (counter_for_result_reader > count_for_getInformation)
 			threadLimit.wait(lock);
+
 		std::cout << "in rr ------"<< counter_for_result_reader << endl;
+
         mtx_counter_for_result_reader.lock();
 		counter_for_result_reader++;
         mtx_counter_for_result_reader.unlock();
@@ -207,7 +226,6 @@ int main(int argc, char *argv[])
         std::cerr << "lemondb: error: threads num can not be negative value " << parsedArgs.threads << std::endl;
         exit(-1);
     } else if (parsedArgs.threads == 0) {
-        // DONE: get thread num from system
         parsedArgs.threads = std::thread::hardware_concurrency();
         std::cerr << "lemondb: info: auto detect thread num "<< parsedArgs.threads << std::endl;
     } else {
@@ -224,7 +242,9 @@ int main(int argc, char *argv[])
 
     std::vector<Query::Ptr> query_queue;
     std::vector<inf_qry> query_queue_property;
+
     std::vector<QueryResult::Ptr> query_result_queue;
+    std::vector<bool> if_query_done_arr(false);
 
     // QueryResult::Ptr result = query->execute();
 
@@ -246,6 +266,19 @@ int main(int argc, char *argv[])
     }
      */
 
+    cout<<query_queue_arr.arr.size()<<endl;
+
+    for (auto it = query_queue_arr.arr.begin(); 
+        it != query_queue_arr.arr.end();
+	    it++) {
+	    std::vector<inf_qry> &the_arr = it->query_data;
+	    std::cout << the_arr[0].targetTable << std::endl;
+	    for (auto jt = the_arr.begin(); jt != the_arr.end(); jt++) {
+            std::cout<<jt->line<<" ";
+
+	    }
+        std::cout<<std::endl;
+    }
 
     // wait for the result printing thread to end
     result_reader_th.join();
