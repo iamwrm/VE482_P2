@@ -4,16 +4,20 @@
 
 #include "query/QueryParser.h"
 #include "query/QueryBuilders.h"
+#include "utils/i_helper.h"
 
 #include <getopt.h>
 #include <fstream>
-#include <sstream>
 #include <iostream>
+#include <mutex>
+#include <sstream>
 #include <string>
 #include <thread>
 
 using std::string;
 using std::endl;
+using std::cout;
+using std::vector;
 
 
 struct {
@@ -25,120 +29,6 @@ struct {
 int count = 0;
 
 //structure to store information of a query
-struct inf_qry {
-    bool read;
-    bool write;
-    bool affectAll; //if the query affect all the tables
-    std::string targetTable; // "" for no target table
-    std::string newTable; // "" for no new table
-    int line;
-};
-
-//return information of a query
-inf_qry getInformation(string qry){
-    int size = qry.size();
-    int begin, end;
-    inf_qry inf;
-    for(int i = 0; i < size; ++i){
-        if(qry[i] == '='){
-            i+=2;
-            begin = i;
-            for(int j = i; j < size; ++j){
-                if(qry[j] == ' '){
-                    end = j;
-                    break;
-                }
-            }
-            break;
-        }
-    }
-    //get command
-    string command = qry.substr(begin, end-begin);
-    //first case: data query
-    if(command=="ADD"||command=="COUNT"||command=="DELETE"||command=="DUPLICATE"||
-        command=="INSERT"||command=="MAX"||command=="MIN"||command=="SELECT"||
-        command=="SUB"||command=="SUM"||command=="SWAP"||command=="UPDATE"){
-        begin = end + 1;
-        for(int i = begin; i < size; ++i){
-            if(qry[i] == '\"'){
-                end = i;
-                break;
-            }
-        }
-        string target = qry.substr(begin, end-begin);
-        inf.targetTable = target;
-        inf.affectAll = false;
-        inf.newTable = "";
-    }
-    else{
-        //if copy table
-        if(command=="Copy"){
-            for(int i = end; i < size; ++i){
-                if(qry[i] == '\"'){
-                    begin = i + 1;
-                    for(int j = begin; j < size; ++j){
-                        if(qry[j] == '\"'){
-                            end = j;
-                            break;
-                        }
-                    }
-                    break;
-                }
-            }
-            inf.targetTable = qry.substr(begin, end-begin);
-            inf.affectAll = false;
-            for(int i = end+1; i < size; ++i){
-                if(qry[i] == '\"'){
-                    begin = i + 1;
-                    for(int j = begin; j < size; ++j){
-                        if(qry[j] == '\"'){
-                            end = j;
-                            break;
-                        }
-                    }
-                    break;
-                }
-            }
-            inf.newTable = qry.substr(begin, end-begin);
-        }
-        else if(command=="LIST"||command=="Quit"){
-            inf.targetTable = "";
-            inf.newTable = "";
-            inf.affectAll = true;
-        }
-        else{
-            for(int i = end; i < size; ++i){
-                if(qry[i] == '\"'){
-                    begin = i + 1;
-                    for(int j = begin; j < size; ++j){
-                        if(qry[j] == '\"'){
-                            end = j;
-                            break;
-                        }
-                    }
-                    break;
-                }
-            }
-            inf.targetTable = qry.substr(begin, end-begin);
-            inf.affectAll = false;
-            inf.newTable = "";
-        }
-    }
-    //record line
-    inf.line = count;
-    //reocrd write/read
-    if(command=="COUNT"||command=="MAX"||command=="MIN"||command=="SELECT"||
-        command=="SUM"||command=="Copy"||command=="Dump"||command=="LIST"||
-        command=="Load"||command=="SHOWTABLE"){
-        inf.read = true;
-        inf.write = false;
-    }
-    else{
-        inf.read = false;
-        inf.write = true;
-    }
-    return inf;
-}
 
 void parseArgs(int argc, char *argv[]) {
     const option longOpts[] = {
@@ -221,6 +111,11 @@ int main(int argc, char *argv[]) {
 
     size_t counter = 0;
 
+    std::vector<Query::Ptr> query_queue;
+    std::vector<inf_qry> query_queue_property;
+    std::mutex mtx_query_queue;
+    std::mutex mtx_query_queue_property;
+
     while (is) {
         try {
             // A very standard REPL
@@ -231,8 +126,19 @@ int main(int argc, char *argv[]) {
             //std::cout<<query->toString()<<endl;
             //std::cout<<getInformation(query->toString()).targetTable<<
             //"   "<<getInformation(query->toString()).newTable<<endl;
+            query_queue.emplace_back(std::move(query));
+            query_queue_property.emplace_back(std::move(
+                getInformation(query_queue[query_queue.size()-1]->toString(),count)
+                ));
+
+
+
+            // std::cout << ++counter << "\n";
+            counter++;
+
+
+            /*
             QueryResult::Ptr result = query->execute();
-            std::cout << ++counter << "\n";
             if (result->success()) {
                 if (result->display()) {
                     std::cout << *result;
@@ -246,6 +152,8 @@ int main(int argc, char *argv[]) {
                 std::cout.flush();
                 std::cerr << "QUERY FAILED:\n\t" << *result;
             }
+            */
+
         }  catch (const std::ios_base::failure& e) {
             // End of input
             break;
@@ -253,6 +161,11 @@ int main(int argc, char *argv[]) {
             std::cout.flush();
             std::cerr << e.what() << std::endl;
         }
+    }
+
+
+    for (auto it = query_queue_property.begin();it!=query_queue_property.end();it++){
+        std::cout<<it->targetTable<<std::endl;
     }
 
     return 0;

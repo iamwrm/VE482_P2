@@ -8,6 +8,7 @@ set(SOURCE_FILES
         db/Table.cpp db/Table.h
 
         utils/formatter.h utils/uexception.h
+        utils/i_helper.h utils/i_helper.cpp
 
         query/Query.cpp query/Query.h
         query/QueryParser.cpp query/QueryParser.h

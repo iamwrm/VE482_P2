@@ -6,9 +6,10 @@
 build_docker
 build_wr
 build_wr_docker
-lemondb
 build_ubuntu
 build_darwin
+build_vbox
+lemondb
 wr_ms
 .vscode
 
