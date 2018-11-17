@@ -13,6 +13,8 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <condition_variable>
+#include <unistd.h>
 
 using std::string;
 using std::endl;
@@ -22,13 +24,23 @@ using std::vector;
 std::mutex mtx_query_queue;
 std::mutex mtx_query_queue_property;
 
+std::condition_variable  threadLimit;
+
 struct {
     std::string listen;
     long threads = 0;
 } parsedArgs;
 
 //record line of query
-int count = 0;
+int count_for_getInformation = 0;
+std::mutex mtx_count_for_getInformation;
+
+int counter_for_result_reader = 0;
+std::mutex mtx_counter_for_result_reader;
+
+int max_line_num = -1;
+std::mutex mtx_max_line_num;
+
 
 // from liu
 size_t counter = 0;
@@ -75,8 +87,6 @@ void qq_reader(std::istream &is, QueryParser &p,
 			// REPL: Read-Evaluate-Print-Loop
 			std::string queryStr = extractQueryString(is);
 			Query::Ptr query = p.parseQuery(queryStr);
-			count++;  // record the line of query
-			counter++;
 			// std::cout<<query->toString()<<endl;
 			// std::cout<<getInformation(query->toString()).targetTable<<
 			//" "<<getInformation(query->toString()).newTable<<endl;
@@ -89,8 +99,19 @@ void qq_reader(std::istream &is, QueryParser &p,
 			query_queue_property.emplace_back(
 			    std::move(getInformation(
 				query_queue[query_queue.size() - 1]->toString(),
-				count)));
+				count_for_getInformation)));
 			mtx_query_queue_property.unlock();
+
+            mtx_count_for_getInformation.lock();
+			count_for_getInformation++;  // record the line of query
+            mtx_count_for_getInformation.unlock();
+
+            std::cout<<"in qq:"<<count_for_getInformation<<endl;
+
+            //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            threadLimit.notify_one();
+
+			counter++;
 		} catch (const std::ios_base::failure &e) {
 			// End of input
 			break;
@@ -98,6 +119,32 @@ void qq_reader(std::istream &is, QueryParser &p,
 			std::cout.flush();
 			std::cerr << e.what() << std::endl;
 		}
+	}
+    mtx_max_line_num.lock();
+    max_line_num=counter;
+    mtx_max_line_num.unlock();
+}
+
+void result_reader()
+{
+	while (1) {
+        mtx_max_line_num.lock();
+        mtx_counter_for_result_reader.lock();
+        if ((max_line_num>0)&&(counter_for_result_reader>max_line_num-1)){
+        mtx_max_line_num.unlock();
+        mtx_counter_for_result_reader.unlock();
+            break;
+        }
+        mtx_max_line_num.unlock();
+        mtx_counter_for_result_reader.unlock();
+        
+		std::unique_lock<std::mutex> lock(mtx_count_for_getInformation);
+		if (counter_for_result_reader > count_for_getInformation)
+			threadLimit.wait(lock);
+		std::cout << "in rr ------"<< counter_for_result_reader << endl;
+        mtx_counter_for_result_reader.lock();
+		counter_for_result_reader++;
+        mtx_counter_for_result_reader.unlock();
 	}
 }
 
@@ -155,16 +202,25 @@ int main(int argc, char *argv[])
 
     std::vector<Query::Ptr> query_queue;
     std::vector<inf_qry> query_queue_property;
+    std::vector<QueryResult::Ptr> query_result_queue;
+
+    // QueryResult::Ptr result = query->execute();
+
+    std::thread {result_reader}.detach();
+
 
     qq_reader(is,p,query_queue,query_queue_property);
 
     /*
-     */
 
     for (auto it = query_queue_property.begin();
 	 it != query_queue_property.end(); it++) {
-	    std::cout << it->targetTable << std::endl;
+	    std::cout << it->line << std::endl;
     }
+     */
+
+    std::cout<<"finish"<<endl;
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 
     return 0;
 }
