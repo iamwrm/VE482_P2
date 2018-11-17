@@ -6,9 +6,13 @@
 #include <getopt.h>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
+
+
+
 struct inf_qry {
 	bool read;
 	bool write;
@@ -18,6 +22,7 @@ struct inf_qry {
 	int line;
 };
 
-inf_qry getInformation(std::string qry,int & count);
+inf_qry getInformation(std::string qry, int &count);
+
 
 #endif  // !I_HELPER_H

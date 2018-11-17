@@ -19,6 +19,8 @@ using std::endl;
 using std::cout;
 using std::vector;
 
+std::mutex mtx_query_queue;
+std::mutex mtx_query_queue_property;
 
 struct {
     std::string listen;
@@ -27,6 +29,9 @@ struct {
 
 //record line of query
 int count = 0;
+
+// from liu
+size_t counter = 0;
 
 //structure to store information of a query
 
@@ -60,22 +65,60 @@ std::string extractQueryString(std::istream &is) {
     } while (true);
 }
 
-int main(int argc, char *argv[]) {
-    // Assume only C++ style I/O is used in lemondb
-    // Do not use printf/fprintf in <cstdio> with this line
-    std::ios_base::sync_with_stdio(false);
+void qq_reader(std::istream &is, QueryParser &p,
+	       std::vector<Query::Ptr> &query_queue,
+	       std::vector<inf_qry> &query_queue_property)
+{
+	while (is) {
+		try {
+			// A very standard REPL
+			// REPL: Read-Evaluate-Print-Loop
+			std::string queryStr = extractQueryString(is);
+			Query::Ptr query = p.parseQuery(queryStr);
+			count++;  // record the line of query
+			counter++;
+			// std::cout<<query->toString()<<endl;
+			// std::cout<<getInformation(query->toString()).targetTable<<
+			//" "<<getInformation(query->toString()).newTable<<endl;
 
-    parseArgs(argc, argv);
+			mtx_query_queue.lock();
+			query_queue.emplace_back(std::move(query));
+			mtx_query_queue.unlock();
 
-    std::fstream fin;
-    if (!parsedArgs.listen.empty()) {
-        fin.open(parsedArgs.listen);
-        if (!fin.is_open()) {
-            std::cerr << "lemondb: error: " << parsedArgs.listen << ": no such file or directory" << std::endl;
-            exit(-1);
-        }
-    }
-    std::istream is(fin.rdbuf());
+			mtx_query_queue_property.lock();
+			query_queue_property.emplace_back(
+			    std::move(getInformation(
+				query_queue[query_queue.size() - 1]->toString(),
+				count)));
+			mtx_query_queue_property.unlock();
+		} catch (const std::ios_base::failure &e) {
+			// End of input
+			break;
+		} catch (const std::exception &e) {
+			std::cout.flush();
+			std::cerr << e.what() << std::endl;
+		}
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	// Assume only C++ style I/O is used in lemondb
+	// Do not use printf/fprintf in <cstdio> with this line
+	std::ios_base::sync_with_stdio(false);
+
+	parseArgs(argc, argv);
+
+	std::fstream fin;
+	if (!parsedArgs.listen.empty()) {
+		fin.open(parsedArgs.listen);
+		if (!fin.is_open()) {
+			std::cerr << "lemondb: error: " << parsedArgs.listen
+				  << ": no such file or directory" << std::endl;
+			exit(-1);
+		}
+	}
+	std::istream is(fin.rdbuf());
 
 #ifdef NDEBUG
     // In production mode, listen argument must be defined
@@ -109,63 +152,18 @@ int main(int argc, char *argv[]) {
     p.registerQueryBuilder(std::make_unique<QueryBuilder(ManageTable)>());
     p.registerQueryBuilder(std::make_unique<QueryBuilder(Complex)>());
 
-    size_t counter = 0;
 
     std::vector<Query::Ptr> query_queue;
     std::vector<inf_qry> query_queue_property;
-    std::mutex mtx_query_queue;
-    std::mutex mtx_query_queue_property;
 
-    while (is) {
-        try {
-            // A very standard REPL
-            // REPL: Read-Evaluate-Print-Loop
-            std::string queryStr = extractQueryString(is);
-            Query::Ptr query = p.parseQuery(queryStr);
-            count++; //record the line of query
-            //std::cout<<query->toString()<<endl;
-            //std::cout<<getInformation(query->toString()).targetTable<<
-            //"   "<<getInformation(query->toString()).newTable<<endl;
-            query_queue.emplace_back(std::move(query));
-            query_queue_property.emplace_back(std::move(
-                getInformation(query_queue[query_queue.size()-1]->toString(),count)
-                ));
+    qq_reader(is,p,query_queue,query_queue_property);
 
+    /*
+     */
 
-
-            // std::cout << ++counter << "\n";
-            counter++;
-
-
-            /*
-            QueryResult::Ptr result = query->execute();
-            if (result->success()) {
-                if (result->display()) {
-                    std::cout << *result;
-                } else {
-#ifndef NDEBUG
-                    std::cout.flush();
-                    std::cerr << *result;
-#endif
-                }
-            } else {
-                std::cout.flush();
-                std::cerr << "QUERY FAILED:\n\t" << *result;
-            }
-            */
-
-        }  catch (const std::ios_base::failure& e) {
-            // End of input
-            break;
-        } catch (const std::exception& e) {
-            std::cout.flush();
-            std::cerr << e.what() << std::endl;
-        }
-    }
-
-
-    for (auto it = query_queue_property.begin();it!=query_queue_property.end();it++){
-        std::cout<<it->targetTable<<std::endl;
+    for (auto it = query_queue_property.begin();
+	 it != query_queue_property.end(); it++) {
+	    std::cout << it->targetTable << std::endl;
     }
 
     return 0;
