@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <map>
 #include <condition_variable>
 #include <unistd.h>
 
@@ -23,8 +24,22 @@ using std::vector;
 
 std::mutex mtx_query_queue;
 std::mutex mtx_query_queue_property;
+std::mutex mtx_query_queue_arr;
 
 std::condition_variable  threadLimit;
+
+
+struct Query_queue_arr{
+    std::map< std::string, int > table_name;
+
+    std::vector<one_table_query> arr;
+};
+
+struct one_table_query{
+    std::string table_name;
+    std::mutex mtx;
+    std::vector<Query::Ptr> query_data;
+};
 
 struct {
     std::string listen;
@@ -77,20 +92,22 @@ std::string extractQueryString(std::istream &is) {
     } while (true);
 }
 
+
+// TODO:
 void qq_reader(std::istream &is, QueryParser &p,
 	       std::vector<Query::Ptr> &query_queue,
-	       std::vector<inf_qry> &query_queue_property)
+	       std::vector<inf_qry> &query_queue_property,
+	       Query_queue_arr query_queue_arr)
 {
+    // This function is in the main thread
+    //
+    //
 	while (is) {
 		try {
-			// A very standard REPL
-			// REPL: Read-Evaluate-Print-Loop
 			std::string queryStr = extractQueryString(is);
 			Query::Ptr query = p.parseQuery(queryStr);
-			// std::cout<<query->toString()<<endl;
-			// std::cout<<getInformation(query->toString()).targetTable<<
-			//" "<<getInformation(query->toString()).newTable<<endl;
 
+            // enqueue query
 			mtx_query_queue.lock();
 			query_queue.emplace_back(std::move(query));
 			mtx_query_queue.unlock();
@@ -102,15 +119,18 @@ void qq_reader(std::istream &is, QueryParser &p,
 				count_for_getInformation)));
 			mtx_query_queue_property.unlock();
 
-            mtx_count_for_getInformation.lock();
+
+
+            // count for how many query information has been stored
+			mtx_count_for_getInformation.lock();
 			count_for_getInformation++;  // record the line of query
-            mtx_count_for_getInformation.unlock();
+			mtx_count_for_getInformation.unlock();
 
-            std::cout<<"in qq:"<<count_for_getInformation<<endl;
+			std::cout << "in qq:" << count_for_getInformation
+				  << endl;
 
-            //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            threadLimit.notify_one();
 
+			threadLimit.notify_one();
 			counter++;
 		} catch (const std::ios_base::failure &e) {
 			// End of input
@@ -120,11 +140,13 @@ void qq_reader(std::istream &is, QueryParser &p,
 			std::cerr << e.what() << std::endl;
 		}
 	}
-    mtx_max_line_num.lock();
-    max_line_num=counter;
-    mtx_max_line_num.unlock();
+	mtx_max_line_num.lock();
+	max_line_num = counter;
+	mtx_max_line_num.unlock();
 }
 
+
+// TODO:
 void result_reader()
 {
 	while (1) {
@@ -206,21 +228,29 @@ int main(int argc, char *argv[])
 
     // QueryResult::Ptr result = query->execute();
 
-    std::thread {result_reader}.detach();
+    // TODO: a table for each query
+    Query_queue_arr query_queue_arr;
 
 
-    qq_reader(is,p,query_queue,query_queue_property);
+    // TODO: output result
+    std::thread result_reader_th{result_reader};
+
+
+    // read the listened file
+    qq_reader(is,p,query_queue,query_queue_property,query_queue_arr);
 
     /*
-
     for (auto it = query_queue_property.begin();
 	 it != query_queue_property.end(); it++) {
 	    std::cout << it->line << std::endl;
     }
      */
 
+
+    // wait for the result printing thread to end
+    result_reader_th.join();
     std::cout<<"finish"<<endl;
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    //std::this_thread::sleep_for(std::chrono::seconds(10));
 
     return 0;
 }
