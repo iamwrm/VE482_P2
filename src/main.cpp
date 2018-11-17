@@ -75,67 +75,80 @@ std::string extractQueryString(std::istream &is) {
     } while (true);
 }
 
-
 // TODO:
 void qq_reader(std::istream &is, QueryParser &p,
 	       std::vector<Query::Ptr> &query_queue,
 	       std::vector<inf_qry> &query_queue_property,
 	       Query_queue_arr &query_queue_arr)
 {
-    // This function is in the main thread
-    //
-    //
+	// This function is in the main thread
+	//
+	//
 	while (is) {
 		try {
 			std::string queryStr = extractQueryString(is);
 			Query::Ptr query = p.parseQuery(queryStr);
 
-            // enqueue query
+			// enqueue query
 			mtx_query_queue.lock();
 			query_queue.emplace_back(std::move(query));
 			mtx_query_queue.unlock();
 
-            // ==============================
+			// ==============================
 			mtx_query_queue_property.lock();
 
-			query_queue_property.emplace_back(
-			    std::move(getInformation(
-				query_queue[query_queue.size() - 1]->toString(),
-				count_for_getInformation)));
+			/*
+				    query_queue_property.emplace_back(
+					std::move(getInformation(
+					    query_queue[query_queue.size() -
+			   1]->toString(), count_for_getInformation)));
+			*/
 
 			inf_qry local_inf_qry = getInformation(
 			    query_queue[query_queue.size() - 1]->toString(),
 			    count_for_getInformation);
 
 			mtx_query_queue_property.unlock();
-            // ==============================
+			// ==============================
+			std::string query_string =
+			    query_queue[query_queue.size() - 1]->toString();
 
 			mtx_query_queue_arr.lock();
-			if (query_queue_arr.table_name.find(
-				local_inf_qry.targetTable) !=
-			    query_queue_arr.table_name.end()) {
-				auto it = query_queue_arr.table_name.find(
-				    local_inf_qry.targetTable);
+			if (query_string[0 + 8] == 'Q' &&
+			    query_string[3 + 8] == 't') {
+				std::cout << "find Quit!:" << counter
+					  << std::endl;
+				query_queue_arr.quit_query = local_inf_qry;
+			} else {
+				if (query_queue_arr.table_name.find(
+					local_inf_qry.targetTable) !=
+				    query_queue_arr.table_name.end()) {
+					auto it =
+					    query_queue_arr.table_name.find(
+						local_inf_qry.targetTable);
 
-				query_queue_arr.arr[it->second]
-				    .query_data.emplace_back(
-					std::move(local_inf_qry));
-				// find the table name
+					query_queue_arr.arr[it->second]
+					    .query_data.emplace_back(
+						std::move(local_inf_qry));
+					// find the table name
+				} else {
+					// new table name
+					query_queue_arr.arr.emplace_back(
+					    std::move(one_table_query()));
+					// just inserted index
+					int jii =
+					    query_queue_arr.arr.size() - 1;
+
+					query_queue_arr.table_name.insert(
+					    std::pair<std::string, int>(
+						local_inf_qry.targetTable,
+						jii));
+
+					query_queue_arr.arr[jii]
+					    .query_data.emplace_back(
+						std::move(local_inf_qry));
+				}
 			}
-            else{
-                // new table name
-                query_queue_arr.arr.emplace_back(std::move(one_table_query()));
-                // just inserted index
-                int jii = query_queue_arr.arr.size()-1;
-
-                query_queue_arr.table_name.insert(std::pair<std::string,int> (
-                local_inf_qry.targetTable,jii
-                ));
-
-                query_queue_arr.arr[jii].query_data.emplace_back(std::move(local_inf_qry));
-
-                
-            }
 			mtx_query_queue_arr.unlock();
 
 			// count for how many query information has been stored
@@ -143,9 +156,8 @@ void qq_reader(std::istream &is, QueryParser &p,
 			count_for_getInformation++;  // record the line of query
 			mtx_count_for_getInformation.unlock();
 
-			//std::cout << "in qq:" << count_for_getInformation
+			// std::cout << "in qq:" << count_for_getInformation
 			//	  << endl;
-
 
 			threadLimit.notify_one();
 			counter++;
@@ -162,10 +174,17 @@ void qq_reader(std::istream &is, QueryParser &p,
 	mtx_max_line_num.unlock();
 }
 
+// TODO:
+void scheduler(){
+    // inspect whether the thread number is bigger than the MAX number;
+
+    // 
+}
 
 // TODO:
 void result_reader()
 {
+    return ;
 	while (1) {
         mtx_max_line_num.lock();
         mtx_counter_for_result_reader.lock();

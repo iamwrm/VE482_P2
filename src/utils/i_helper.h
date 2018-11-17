@@ -34,6 +34,10 @@ struct Query_queue_arr {
 	std::map<std::string, int> table_name;
 
 	std::vector<one_table_query> arr;
+
+	// TODO: handle quit;
+	inf_qry quit_query;
+	
 };
 
 inf_qry getInformation(std::string qry, int &count);
