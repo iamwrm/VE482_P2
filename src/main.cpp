@@ -45,13 +45,13 @@ std::mutex mtx_counter_for_result_reader;
 int max_line_num = -1;
 std::mutex mtx_max_line_num;
 
-std::vector<bool> if_query_done_arr(10,false);
+std::vector<bool> if_query_done_arr(100,false);
 std::mutex mtx_if_query_done_arr;
 
-    std::vector<Query::Ptr> query_queue;
-    std::vector<inf_qry> query_queue_property;
+std::vector<Query::Ptr> query_queue;
+std::vector<inf_qry> query_queue_property;
 
-    std::vector<QueryResult::Ptr> query_result_queue;
+std::vector<QueryResult::Ptr> query_result_queue(10);
 
 // from liu
 size_t counter = 0;
@@ -187,6 +187,7 @@ void qq_reader(std::istream &is, QueryParser &p,
 	mtx_max_line_num.unlock();
 }
 
+// TODO:
 void thread_starter(int queryID)
 {
 
@@ -197,8 +198,11 @@ void thread_starter(int queryID)
    } 
    mtx_query_result_queue.unlock();
 
-	query_result_queue[queryID];
-	query_queue[queryID]->execute();
+
+
+	query_result_queue[queryID]= query_queue[queryID]->execute();
+
+
 
    mtx_if_query_done_arr.lock();
    if (if_query_done_arr.size() - 1 < (size_t)queryID) {
@@ -206,6 +210,8 @@ void thread_starter(int queryID)
    }
    if_query_done_arr[queryID] = true;
    mtx_if_query_done_arr.unlock();
+
+
 
    mtx_count_for_executed.lock();
    count_for_executed++;
@@ -227,12 +233,25 @@ void scheduler()
 	while (1) {
 		// get query id
 
+		// DEBUG:
+
+		for (int i =0;i<100;i++){
+			if(if_query_done_arr[i]==true){
+				cout<<"1";
+			}
+			else {
+				cout<<"0";
+			}
+		}
+		cout<<endl;
+
 		size_t queryID =
 		    query_queue_arr.arr[tableID].query_data[qiqID].line;
-		std::cout << "-----------twoo iter" << tableID << " "<< qiqID<<" "<< queryID << endl;
+		//std::cout << "-----------twoo iter" << tableID << " "<< qiqID<<" "<< queryID << endl;
 
         auto i = queryID;
         i++;
+
 		std::thread{thread_starter, queryID}.detach();
         //thread_starter(queryID);
 
@@ -284,7 +303,12 @@ void result_reader()
 		break;
 	}
 
-	std::cout << "in rr ------" << counter_for_result_reader << endl;
+	QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
+
+	std::cout << "in rr ------" << counter_for_result_reader<<
+	" "<< endl;
+
+	std::cout << *result;
 
 	//std::cout<<query_result_queue[counter_for_result_reader];
 
