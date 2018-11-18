@@ -45,7 +45,7 @@ std::mutex mtx_counter_for_result_reader;
 int max_line_num = -1;
 std::mutex mtx_max_line_num;
 
-std::vector<bool> if_query_done_arr(false);
+std::vector<bool> if_query_done_arr(10,false);
 std::mutex mtx_if_query_done_arr;
 
     std::vector<Query::Ptr> query_queue;
@@ -191,28 +191,27 @@ void thread_starter(int queryID)
 {
 
    mtx_query_result_queue.lock();
-   std::cout<<"in thread starter queryID:"<<queryID<<"  "<<query_queue.size()<<std::endl;
+   //std::cout<<"in thread starter queryID:"<<queryID<<"  "<<query_queue.size()<<std::endl;
    if ((size_t)queryID>query_result_queue.size()-1){
        query_result_queue.resize(2 * queryID);
    } 
    mtx_query_result_queue.unlock();
 
+	query_result_queue[queryID];
+	query_queue[queryID]->execute();
 
+   mtx_if_query_done_arr.lock();
+   if (if_query_done_arr.size() - 1 < (size_t)queryID) {
+	   if_query_done_arr.resize(2 * queryID);
+   }
+   if_query_done_arr[queryID] = true;
+   mtx_if_query_done_arr.unlock();
 
+   mtx_count_for_executed.lock();
+   count_for_executed++;
+   mtx_count_for_executed.unlock();
 
-	//query_result_queue[queryID] = 
-    //query_queue[queryID]->execute();
-
-
-    mtx_if_query_done_arr.lock();
-    //if_query_done_arr[queryID]=true;
-    mtx_if_query_done_arr.unlock();
-
-    mtx_count_for_executed.lock();
-    count_for_executed++;
-    mtx_count_for_executed.unlock();
-
-    readLimit.notify_one();
+   readLimit.notify_one();
 }
 
 // TODO:
@@ -254,7 +253,7 @@ void scheduler()
 // TODO:
 void result_reader()
 {
-    return;
+    //return;
 	while (1) {
         mtx_max_line_num.lock();
         mtx_counter_for_result_reader.lock();
@@ -276,11 +275,18 @@ void result_reader()
 
             */
 
-		std::unique_lock<std::mutex> lock(mtx_count_for_executed);
-		if (counter_for_result_reader > count_for_executed)
+	while (1) {
+		std::unique_lock<std::mutex> lock(mtx_if_query_done_arr);
+		if (if_query_done_arr[counter_for_result_reader] == false){
 			readLimit.wait(lock);
+			continue;
+		}
+		break;
+	}
 
-		std::cout << "in rr ------"<< count_for_executed << endl;
+	std::cout << "in rr ------" << counter_for_result_reader << endl;
+
+	//std::cout<<query_result_queue[counter_for_result_reader];
 
         mtx_counter_for_result_reader.lock();
 		counter_for_result_reader++;
