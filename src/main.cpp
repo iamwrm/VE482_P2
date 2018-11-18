@@ -234,12 +234,28 @@ void thread_starter(int queryID)
 	int a =0;
 	inf_qry local_inf_qry=getInformation(this_query_string,a);
 	std::string new_table_name = local_inf_qry.newTable;
-	
+	std::string this_table_name = local_inf_qry.targetTable;
 
 	mtx_query_queue_arr.lock();
+	if (local_inf_qry.write){
+		int idx =query_queue_arr.table_name.find(this_table_name)->second;
+	std::cerr<<"in thread starter write queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
+		query_queue_arr.arr[idx].havewriter=false;
+	}
+	if (local_inf_qry.read) {
+		int idx = query_queue_arr.table_name.find(this_table_name)->second;
+		query_queue_arr.arr[idx].reader_count--;
+		if (query_queue_arr.arr[idx].reader_count == 0) {
+			query_queue_arr.arr[idx].havereader=false;
+		}
+	}
 	if (this_query_string[0 + 8] == 'C' && this_query_string[3 + 8] == 'y') {
 		int idx =query_queue_arr.table_name.find(new_table_name)->second;
 		query_queue_arr.arr[idx].ifexist=true;
+	}
+	if (this_query_string[0 + 8] == 'D' && this_query_string[3 + 8] == 'P') {
+		int idx =query_queue_arr.table_name.find(this_table_name)->second;
+		query_queue_arr.arr[idx].ifexist=false;
 	}
 	mtx_query_queue_arr.unlock();
 
@@ -284,6 +300,16 @@ void scheduler()
 		}
 
 		for (size_t i = 0; i < query_queue_arr.arr.size(); ++i) {
+
+			for (size_t i = 0; i < query_queue_arr.arr.size();
+			     ++i) {
+				std::cout << query_queue_arr.arr[i].havereader
+					  << query_queue_arr.arr[i].havewriter
+					  << " "
+					  << query_queue_arr.arr[i].reader_count
+					  << std::endl;
+			}
+
 			if (query_queue_arr.arr[i].ifexist) {
 				// lock the mutex
 				mtx_query_queue_arr.lock();
@@ -317,6 +343,8 @@ void scheduler()
 				if (query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].read) {
 					if (query_queue_arr.arr[i].havereader) {
 
+						query_queue_arr.arr[i].reader_count++;
+
 						std::thread{thread_starter, queryID}.detach();
 
 						// thread num--
@@ -324,13 +352,14 @@ void scheduler()
 						query_queue_arr.arr[i].head++;
 						goto distribute;
 					} else 
-					if (query_queue_arr.arr[i] .havewriter) {
+					if (query_queue_arr.arr[i].havewriter) {
 						// unlock the mutex
 						mtx_query_queue_arr.unlock();
 						continue;
 					} else 
 					{
 						query_queue_arr.arr[i].havereader = true;
+						query_queue_arr.arr[i].reader_count=1;
 						std::thread{thread_starter, queryID}.detach();
 
 						query_queue_arr.arr[i].head++;
@@ -497,6 +526,7 @@ int main(int argc, char *argv[])
     }
      */
 
+    /*
     cout<<query_queue_arr.arr.size()<<endl;
 
     for (auto it = query_queue_arr.arr.begin(); 
@@ -510,6 +540,7 @@ int main(int argc, char *argv[])
 	    }
         std::cout<<std::endl;
     }
+     */
 
     scheduler_th.join();
     // wait for the result printing thread to end

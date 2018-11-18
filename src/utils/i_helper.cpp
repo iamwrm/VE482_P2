@@ -96,7 +96,7 @@ inf_qry getInformation(std::string qry, int& count)
 	// reocrd write/read
 	if (command == "COUNT" || command == "MAX" || command == "MIN" ||
 	    command == "SELECT" || command == "SUM" || command == "Copy" ||
-	    command == "Dump" || command == "LIST" || command == "Load" ||
+	    command == "Dump" || command == "LIST"  ||
 	    command == "SHOWTABLE") {
 		inf.read = true;
 		inf.write = false;

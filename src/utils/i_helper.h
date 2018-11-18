@@ -30,6 +30,7 @@ struct one_table_query {
 	bool ifexist=false;
 	bool havereader=false;
 	bool havewriter=false; 
+	int reader_count = 0;
 	size_t head =0;
 	std::vector<inf_qry> query_data;
 };
