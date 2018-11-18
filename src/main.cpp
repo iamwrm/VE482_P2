@@ -6,6 +6,8 @@
 #include "query/QueryBuilders.h"
 #include "utils/i_helper.h"
 
+#include <cassert>
+
 
 using std::string;
 using std::endl;
@@ -54,7 +56,7 @@ std::mutex mtx_counter_for_result_reader;
 int max_line_num = -1;
 std::mutex mtx_max_line_num;
 
-std::vector<bool> if_query_done_arr(200,false);
+std::vector<bool> if_query_done_arr;
 std::mutex mtx_if_query_done_arr;
 
 std::vector<Query::Ptr> query_queue;
@@ -68,6 +70,7 @@ std::mutex mtx_nothing_to_do;
 
 void print_if_query_done_arr()
 {
+	return;
 	mtx_print_if.lock();
 	//cout<<"_";
 	for (int i = 0; i < 200; i++) {
@@ -157,11 +160,12 @@ void qq_reader(std::istream &is, QueryParser &p,
 			int local_query_id = local_inf_qry.line;
 
 			mtx_if_query_done_arr.lock();
-			if ((size_t)local_query_id>if_query_done_arr.size()-1){
-				if_query_done_arr.resize(2*local_query_id);
-			}
-			if_query_done_arr[local_query_id]=false;
+			if_query_done_arr.push_back(false);
 			mtx_if_query_done_arr.unlock();
+
+			mtx_query_result_queue.lock();
+			query_result_queue.push_back(nullptr);
+			mtx_query_result_queue.unlock();
 
 			mtx_query_queue_arr.lock();
 			if (query_string[0 + 8] == 'Q' &&
@@ -233,15 +237,12 @@ void qq_reader(std::istream &is, QueryParser &p,
 void thread_starter(int queryID)
 {
 
-   mtx_query_result_queue.lock();
 	//std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
-   if ((size_t)queryID>query_result_queue.size()-1){
-       query_result_queue.resize(2 * queryID);
-   } 
-   mtx_query_result_queue.unlock();
+   //if ((size_t)queryID>query_result_queue.size()-1){
+    //   query_result_queue.resize(2 * queryID);
+   //} 
 
    mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
-
 
 
 
@@ -299,12 +300,7 @@ void thread_starter(int queryID)
 
 
    mtx_if_query_done_arr.lock();
-   if (if_query_done_arr.size() - 1 < (size_t)queryID) {
-	   if_query_done_arr.resize(2 * queryID);
-   }
-
    if_query_done_arr[queryID] = true;
-
    mtx_if_query_done_arr.unlock();
 
 
@@ -312,8 +308,8 @@ void thread_starter(int queryID)
 
    mtx_count_for_executed.lock(); count_for_executed++; mtx_count_for_executed.unlock();
 
-   //readLimit.notify_one();
-   readLimit.notify_all();
+   readLimit.notify_one();
+   //readLimit.notify_all();
    cd_real_thread_limit.notify_one();
    cd_nothing_to_do.notify_all();
 }
@@ -448,9 +444,6 @@ void scheduler()
 
 
 	}
-	std::cerr<<"--------------out of while";
-	query_queue[max_line_num]->execute();
-	std::cerr<<"--------------out of quit";
 }
 
 // TODO:
@@ -476,22 +469,24 @@ void result_reader()
 		{
 			std::unique_lock<std::mutex> lock(mtx_query_queue_arr);
 
-			if (if_query_done_arr[counter_for_result_reader] == false){
-				std::cerr << "in cv" << counter_for_result_reader<< " "<< endl;
+			if (if_query_done_arr[counter_for_result_reader] != true){
+				//std::cerr << "in cv" << counter_for_result_reader<< " "<< endl;
 				readLimit.wait(lock);
 				goto back;
-				std::cerr << "wake up" << counter_for_result_reader<< " "<< endl;
+				//std::cerr << "wake up" << counter_for_result_reader<< " "<< endl;
 			}
 
 		}
 
-		std::cerr << "in rr ------" << counter_for_result_reader<< " "<< endl;
+		//std::cerr << "in rr ------" << counter_for_result_reader<< " "<< endl;
 		//print_if_query_done_arr();
 
 		mtx_counter_for_result_reader.lock();
 
 		QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
+		assert(result);
 		cout<<counter_for_result_reader+1<<endl;
+			//std::cout << "|"<<counter_for_result_reader+1<<std::endl;
 		if (result->display()){
 			std::cout << *result;
 			std::cout.flush();
@@ -501,8 +496,7 @@ void result_reader()
 		counter_for_result_reader++;
         mtx_counter_for_result_reader.unlock();
 
-		std::cerr << "in rr -finished-----" << counter_for_result_reader<<
-		" "<< endl;
+		//std::cerr << "in rr -finished-----" << counter_for_result_reader<< " "<< endl;
 	}
 }
 
@@ -569,7 +563,6 @@ int main(int argc, char *argv[])
     // read the listened file
     qq_reader(is,p,query_queue,query_queue_property,query_queue_arr);
 
-    std::thread result_reader_th{result_reader};
     std::thread scheduler_th{scheduler};
 
 
@@ -596,10 +589,16 @@ int main(int argc, char *argv[])
     }
      */
 
+    std::thread result_reader_th{result_reader};
     scheduler_th.join();
     // wait for the result printing thread to end
-    //result_reader_th.join();
-    std::cout<<"finish"<<endl;
+    result_reader_th.join();
+
+    //std::cout<<"finish"<<endl;
+
+	//std::cerr<<"--------------out of while";
+	query_queue[max_line_num]->execute();
+	//std::cerr<<"--------------out of quit";
     //std::this_thread::sleep_for(std::chrono::seconds(10));
 
     return 0;
