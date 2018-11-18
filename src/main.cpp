@@ -21,9 +21,18 @@ std::mutex mtx_query_queue_arr;
 std::condition_variable  threadLimit;
 std::condition_variable  readLimit;
 
-std::vector<std::mutex> query_arr_mtx;
+std::condition_variable  cd_real_thread_limit;
+int present_thread_num = 0;
+std::mutex mtx_present_thread_num;
 
-    Query_queue_arr query_queue_arr;
+
+
+std::vector<std::mutex> query_arr_mtx(10);
+
+
+
+Query_queue_arr query_queue_arr;
+std::mutex mtx_query_queue_arr;
 
 
 
@@ -49,7 +58,6 @@ std::vector<bool> if_query_done_arr(100,false);
 std::mutex mtx_if_query_done_arr;
 
 std::vector<Query::Ptr> query_queue;
-std::vector<inf_qry> query_queue_property;
 
 std::vector<QueryResult::Ptr> query_result_queue(10);
 
@@ -226,46 +234,82 @@ void scheduler()
 	// inspect whether the thread number is bigger than the MAX number;
 
 	//
-	//int ttt = 0;
-	size_t tableID = 0;
-	size_t qiqID = 0;
+	// int ttt = 0;
+
 	// while (1) {
 	while (1) {
-		// get query id
+	loop:
+		for (size_t i = 0; i < query_queue_arr.arr.size(); ++i) {
+			if (query_queue_arr.arr[i].ifexist) {
+				// lock the mutex
+				mtx_query_queue_arr.lock();
 
-		// DEBUG:
+			distribute:
+				// if there's a thread remaining, do
+				size_t queryID =
+				    query_queue_arr.arr[i]
+					.query_data[query_queue_arr.arr[i].head]
+					.line;
+				if (query_queue_arr.arr[i].head >=
+				    query_queue_arr.arr[i].query_data.size()) {
+					// unlock the mutex
+					mtx_query_queue_arr.unlock();
+					continue;
+				}
+				if (query_queue_arr.arr[i]
+					.query_data[query_queue_arr.arr[i].head]
+					.read) {
+					if (query_queue_arr.arr[i].havereader) {
+						std::thread{thread_starter,
+							    queryID}
+						    .detach();
+						// thread num--
+						query_queue_arr.arr[i].head++;
+						goto distribute;
+					} else if (query_queue_arr.arr[i]
+						       .havewriter) {
+						// unlock the mutex
+						mtx_query_queue_arr.unlock();
+						continue;
+					} else {
+						query_queue_arr.arr[i]
+						    .havereader = true;
+						std::thread{thread_starter,
+							    queryID}
+						    .detach();
+						// thread num--
+						query_queue_arr.arr[i].head++;
+						goto distribute;
+					}
+				} else if (query_queue_arr.arr[i]
+					       .query_data
+						   [query_queue_arr.arr[i].head]
+					       .write) {
+					if (query_queue_arr.arr[i].havereader ||
+					    query_queue_arr.arr[i].havewriter) {
+						// unlock the mutex
+						mtx_query_queue_arr.unlock();
+						continue;
+					} else {
+						query_queue_arr.arr[i]
+						    .havewriter = true;
+						std::thread{thread_starter,
+							    queryID}
+						    .detach();
+						// thread num--
+						query_queue_arr.arr[i].head++;
+						goto distribute;
+					}
+				}
+				// if there's no thread remaining, sleep until
+				// awaken
 
-		for (int i =0;i<100;i++){
-			if(if_query_done_arr[i]==true){
-				cout<<"1";
-			}
-			else {
-				cout<<"0";
+				// unlock the mutex
+				mtx_query_queue_arr.unlock();
 			}
 		}
-		cout<<endl;
-
-		size_t queryID =
-		    query_queue_arr.arr[tableID].query_data[qiqID].line;
-		//std::cout << "-----------twoo iter" << tableID << " "<< qiqID<<" "<< queryID << endl;
-
-        auto i = queryID;
-        i++;
-
-		std::thread{thread_starter, queryID}.detach();
-        //thread_starter(queryID);
-
-        if (qiqID==query_queue_arr.arr[tableID].query_data.size()){
-            tableID++;
-            qiqID=0;
-        }
-        else{
-            qiqID++;
-        }
-        if (tableID==query_queue_arr.arr.size()){
-            break;
-        }
-
+		// one loop finish
+		goto loop;
 	}
 }
 
