@@ -237,7 +237,7 @@ void qq_reader(std::istream &is, QueryParser &p,
 void thread_starter(int queryID)
 {
 
-	//std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
+	std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
    //if ((size_t)queryID>query_result_queue.size()-1){
     //   query_result_queue.resize(2 * queryID);
    //} 
