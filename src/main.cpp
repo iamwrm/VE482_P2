@@ -292,8 +292,14 @@ void scheduler()
 
 				//std::cout<<"distribute\n";
 				// if there's a thread remaining, do
-				std::unique_lock<std::mutex> lock(mtx_present_thread_num);
-				if (present_thread_num>8) cd_real_thread_limit.wait(lock);
+				{
+					std::unique_lock<std::mutex> lock(
+					    mtx_present_thread_num);
+					if (present_thread_num > 8) {
+						std::cout << " wait for thread\n";
+						cd_real_thread_limit.wait(lock);
+					}
+				}
 
 				std::cout<<"pass wait\n";
 
