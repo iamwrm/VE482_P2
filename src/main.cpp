@@ -225,7 +225,7 @@ void thread_starter(int queryID)
 {
 
    mtx_query_result_queue.lock();
-	std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
+	//std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
    if ((size_t)queryID>query_result_queue.size()-1){
        query_result_queue.resize(2 * queryID);
    } 
@@ -267,7 +267,19 @@ void thread_starter(int queryID)
 	}
 	if (this_query_string[0 + 8] == 'D' && this_query_string[3 + 8] == 'P') {
 		int idx =query_queue_arr.table_name.find(this_table_name)->second;
+
 		query_queue_arr.arr[idx].ifexist=false;
+
+		size_t that_head = query_queue_arr.arr[idx].head;
+
+		if (that_head < query_queue_arr.arr[idx].query_data.size()){
+			int that_id = query_queue_arr.arr[idx].query_data[that_head].line;
+			std::string that_query_string =  query_queue[that_id]->toString();
+			if (that_query_string[0 + 8] == 'L' && that_query_string[3 + 8] == 'd') {
+				query_queue_arr.arr[idx].ifexist= true;
+			}
+		}
+
 	}
 	mtx_query_queue_arr.unlock();
 
@@ -306,6 +318,7 @@ void scheduler()
 
 	// while (1) {
 	while (1) {
+
 		print_if_query_done_arr();
 
 		mtx_max_line_num.lock();
@@ -320,27 +333,21 @@ void scheduler()
 
 		for (size_t i = 0; i < query_queue_arr.arr.size(); ++i) {
 			cd_nothing_to_do.notify_all();
-			std::cerr
-			    << "i:" << i
-			    << query_queue_arr.arr[i].query_data[0].targetTable
-			    << "head:" << query_queue_arr.arr[i].head<<"|"
-			    << query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line<< endl;
+
+//			std::cerr << "i:" << i << query_queue_arr.arr[i].query_data[0].targetTable << "head:" << query_queue_arr.arr[i].head<<"|" << query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line<< endl;
 
 			for (size_t j = 0; j < query_queue_arr.arr.size();
 			     ++j) {
-				std::cerr << query_queue_arr.arr[j].havereader
-					  << query_queue_arr.arr[j].havewriter
-					  << " "
-					  << query_queue_arr.arr[j].reader_count
-					  << std::endl;
+				//std::cerr << query_queue_arr.arr[j].havereader << query_queue_arr.arr[j].havewriter << " " << query_queue_arr.arr[j].reader_count << std::endl;
 			}
 
 
 			if (query_queue_arr.arr[i].ifexist) {
 				// lock the mutex
-				mtx_query_queue_arr.lock();
 
 				distribute:
+
+				mtx_query_queue_arr.lock();
 
 				//std::cout<<"distribute\n";
 				// if there's a thread remaining, do
@@ -348,13 +355,13 @@ void scheduler()
 					std::unique_lock<std::mutex> lock(
 					    mtx_present_thread_num);
 					if (present_thread_num > 8) {
-						std::cerr << " wait for thread\n";
+					//	std::cerr << " wait for thread\n";
 						cd_real_thread_limit.wait(lock);
 						cd_real_thread_limit.notify_one();
 					}
 				}
 
-				std::cerr<<"pass wait for thread\n";
+				//std::cerr<<"pass wait for thread\n";
 
 
 
@@ -380,6 +387,7 @@ void scheduler()
 						// thread num--
 
 						query_queue_arr.arr[i].head++;
+						mtx_query_queue_arr.unlock();
 						goto distribute;
 					} else 
 					if (query_queue_arr.arr[i].havewriter) {
@@ -390,10 +398,12 @@ void scheduler()
 					{
 						query_queue_arr.arr[i].havereader = true;
 						query_queue_arr.arr[i].reader_count=1;
+
 						have_executed = true;
 						std::thread{thread_starter, queryID}.detach();
 
 						query_queue_arr.arr[i].head++;
+						mtx_query_queue_arr.unlock();
 						goto distribute;
 					}
 				} else 
@@ -408,6 +418,7 @@ void scheduler()
 						std::thread{thread_starter, queryID}.detach();
 
 						query_queue_arr.arr[i].head++;
+						mtx_query_queue_arr.unlock();
 						goto distribute;
 					}
 				}
@@ -415,10 +426,10 @@ void scheduler()
 				// unlock the mutex
 				mtx_query_queue_arr.unlock();
 			}
-				std::cerr<<"out for,"<<have_executed<<endl;
+				//std::cerr<<"out for,"<<have_executed<<endl;
 		}
 		// one loop finish
-		std::cerr<<"!!!out for,"<<have_executed<<"|"<<count_for_executed<<endl;
+		//std::cerr<<"!!!out for,"<<have_executed<<"|"<<count_for_executed<<endl;
 
 		if (!have_executed){
 		std::unique_lock<std::mutex> lock(mtx_nothing_to_do);
@@ -435,9 +446,11 @@ void scheduler()
 // TODO:
 void result_reader()
 {
-    return;
+				std::cerr << "===============in rr" << counter_for_result_reader<< " "<< endl;
+				return;
 	while (1) {
 
+				std::cerr << "in cv" << counter_for_result_reader<< " "<< endl;
 		{
 			std::unique_lock<std::mutex> lock(mtx_query_queue_arr);
 			if (if_query_done_arr[counter_for_result_reader] == false){
