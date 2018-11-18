@@ -214,7 +214,7 @@ void thread_starter(int queryID)
 {
 
    mtx_query_result_queue.lock();
-   std::cerr<<"in thread starter queryID:"<<queryID<<std::endl;
+	std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
    if ((size_t)queryID>query_result_queue.size()-1){
        query_result_queue.resize(2 * queryID);
    } 
@@ -241,6 +241,10 @@ void thread_starter(int queryID)
    if_query_done_arr[queryID] = true;
    mtx_if_query_done_arr.unlock();
 
+
+   mtx_present_thread_num.lock();
+   present_thread_num--;
+   mtx_present_thread_num.unlock();
 
 
    mtx_count_for_executed.lock();
@@ -293,9 +297,6 @@ void scheduler()
 						std::thread{thread_starter, queryID}.detach();
 
 						// thread num--
-						mtx_present_thread_num.lock();
-						present_thread_num--;
-						mtx_present_thread_num.unlock();
 
 						query_queue_arr.arr[i].head++;
 						goto distribute;
@@ -483,7 +484,6 @@ int main(int argc, char *argv[])
     }
      */
 
-	/*
     cout<<query_queue_arr.arr.size()<<endl;
 
     for (auto it = query_queue_arr.arr.begin(); 
@@ -497,7 +497,6 @@ int main(int argc, char *argv[])
 	    }
         std::cout<<std::endl;
     }
-	*/
 
     scheduler_th.join();
     // wait for the result printing thread to end
