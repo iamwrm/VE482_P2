@@ -69,7 +69,7 @@ std::mutex mtx_nothing_to_do;
 void print_if_query_done_arr()
 {
 	mtx_print_if.lock();
-	cout<<"_";
+	//cout<<"_";
 	for (int i = 0; i < 200; i++) {
 		if (if_query_done_arr[i] == true) {
 			cout << "1";
@@ -281,7 +281,9 @@ void thread_starter(int queryID)
    if (if_query_done_arr.size() - 1 < (size_t)queryID) {
 	   if_query_done_arr.resize(2 * queryID);
    }
+
    if_query_done_arr[queryID] = true;
+
    mtx_if_query_done_arr.unlock();
 
 
@@ -317,14 +319,19 @@ void scheduler()
 
 
 		for (size_t i = 0; i < query_queue_arr.arr.size(); ++i) {
+			cd_nothing_to_do.notify_all();
+			std::cerr
+			    << "i:" << i
+			    << query_queue_arr.arr[i].query_data[0].targetTable
+			    << "head:" << query_queue_arr.arr[i].head<<"|"
+			    << query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line<< endl;
 
-
-			for (size_t i = 0; i < query_queue_arr.arr.size();
-			     ++i) {
-				std::cerr << query_queue_arr.arr[i].havereader
-					  << query_queue_arr.arr[i].havewriter
+			for (size_t j = 0; j < query_queue_arr.arr.size();
+			     ++j) {
+				std::cerr << query_queue_arr.arr[j].havereader
+					  << query_queue_arr.arr[j].havewriter
 					  << " "
-					  << query_queue_arr.arr[i].reader_count
+					  << query_queue_arr.arr[j].reader_count
 					  << std::endl;
 			}
 
@@ -343,14 +350,17 @@ void scheduler()
 					if (present_thread_num > 8) {
 						std::cerr << " wait for thread\n";
 						cd_real_thread_limit.wait(lock);
+						cd_real_thread_limit.notify_one();
 					}
 				}
 
-				std::cerr<<"pass wait\n";
+				std::cerr<<"pass wait for thread\n";
 
 
 
 				size_t queryID = query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
+
+				//std::cerr<<"out for,"<<have_executed<<endl;
 
 				// tableID++    for loop
 				if (query_queue_arr.arr[i].head >= query_queue_arr.arr[i].query_data.size()) {
@@ -405,8 +415,10 @@ void scheduler()
 				// unlock the mutex
 				mtx_query_queue_arr.unlock();
 			}
+				std::cerr<<"out for,"<<have_executed<<endl;
 		}
 		// one loop finish
+		std::cerr<<"!!!out for,"<<have_executed<<"|"<<count_for_executed<<endl;
 
 		if (!have_executed){
 		std::unique_lock<std::mutex> lock(mtx_nothing_to_do);
@@ -417,6 +429,7 @@ void scheduler()
 	}
 	std::cerr<<"--------------out of while";
 	query_queue[max_line_num]->execute();
+	std::cerr<<"--------------out of quit";
 }
 
 // TODO:
