@@ -222,32 +222,57 @@ void scheduler()
 
 	//
 	//int ttt = 0;
-	size_t tableID = 0;
-	size_t qiqID = 0;
+	
 	// while (1) {
 	while (1) {
-		// get query id
-
-		size_t queryID =
-		    query_queue_arr.arr[tableID].query_data[qiqID].line;
-		std::cout << "-----------twoo iter" << tableID << " "<< qiqID<<" "<< queryID << endl;
-
-        auto i = queryID;
-        i++;
-		std::thread{thread_starter, queryID}.detach();
-        //thread_starter(queryID);
-
-        if (qiqID==query_queue_arr.arr[tableID].query_data.size()){
-            tableID++;
-            qiqID=0;
+    loop:
+        for(size_t i = 0; i < query_queue_arr.arr.size(); ++i){
+            //if there is thread remaining
+            size_t queryID =
+		    query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
+            //if table exist
+            if(query_queue_arr.arr[i].ifexist){
+            distribute:
+                //lock the mutex
+                if(query_queue_arr.arr[i].head>=query_queue_arr.arr[i].query_data.size()){
+                    continue;
+                }
+                if(query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].read){
+                    if(query_queue_arr.arr[i].havereader){
+                        std::thread{thread_starter, queryID}.detach();
+                        //thread num--
+                        query_queue_arr.arr[i].head++;
+                        goto distribute;
+                    }
+                    else if(query_queue_arr.arr[i].havewriter){
+                        continue;
+                    }
+                    else{
+                        query_queue_arr.arr[i].havereader=true;
+                        std::thread{thread_starter, queryID}.detach();
+                        //thread num--
+                        query_queue_arr.arr[i].head++;
+                        goto distribute;
+                    }
+                }
+                else if(query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].write){
+                    if(query_queue_arr.arr[i].havereader||query_queue_arr.arr[i].havewriter){
+                        continue;
+                    }
+                    else{
+                        query_queue_arr.arr[i].havewriter=true;
+                        std::thread{thread_starter, queryID}.detach();
+                        //thread num--
+                        query_queue_arr.arr[i].head++;
+                        goto distribute;
+                    }
+                }
+                //unlock the mutex
+            }
+            //if there is no thread remaining, sleep until awaken
         }
-        else{
-            qiqID++;
-        }
-        if (tableID==query_queue_arr.arr.size()){
-            break;
-        }
-
+        // one loop finish
+        goto loop;
 	}
 }
 
