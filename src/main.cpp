@@ -16,7 +16,8 @@ std::mutex mtx_query_queue;
 std::mutex mtx_query_result_queue;
 std::mutex mtx_query_queue_property;
 
-std::mutex mtx_query_queue_arr;
+std::vector<inf_qry> query_queue_property;
+
 
 std::condition_variable  threadLimit;
 std::condition_variable  readLimit;
@@ -206,6 +207,10 @@ void thread_starter(int queryID)
    } 
    mtx_query_result_queue.unlock();
 
+   mtx_present_thread_num.lock();
+   present_thread_num++;
+   mtx_present_thread_num.unlock();
+
 
 
 	query_result_queue[queryID]= query_queue[queryID]->execute();
@@ -226,6 +231,7 @@ void thread_starter(int queryID)
    mtx_count_for_executed.unlock();
 
    readLimit.notify_one();
+   cd_real_thread_limit.notify_one();
 }
 
 // TODO:
@@ -238,78 +244,89 @@ void scheduler()
 
 	// while (1) {
 	while (1) {
-	loop:
+
+    std::cout<<"loop\n";
+
 		for (size_t i = 0; i < query_queue_arr.arr.size(); ++i) {
 			if (query_queue_arr.arr[i].ifexist) {
 				// lock the mutex
 				mtx_query_queue_arr.lock();
 
-			distribute:
+				distribute:
+
+				std::cout<<"distribute\n";
 				// if there's a thread remaining, do
-				size_t queryID =
-				    query_queue_arr.arr[i]
-					.query_data[query_queue_arr.arr[i].head]
-					.line;
-				if (query_queue_arr.arr[i].head >=
-				    query_queue_arr.arr[i].query_data.size()) {
+				size_t queryID = query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
+
+				// tableID++    for loop
+				if (query_queue_arr.arr[i].head >= query_queue_arr.arr[i].query_data.size()) {
 					// unlock the mutex
 					mtx_query_queue_arr.unlock();
 					continue;
 				}
-				if (query_queue_arr.arr[i]
-					.query_data[query_queue_arr.arr[i].head]
-					.read) {
+
+				if (query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].read) {
 					if (query_queue_arr.arr[i].havereader) {
-						std::thread{thread_starter,
-							    queryID}
-						    .detach();
+
+						std::thread{thread_starter, queryID}.detach();
+
 						// thread num--
+						mtx_present_thread_num.lock();
+						present_thread_num--;
+						mtx_present_thread_num.unlock();
+
 						query_queue_arr.arr[i].head++;
 						goto distribute;
-					} else if (query_queue_arr.arr[i]
-						       .havewriter) {
+					} else 
+					if (query_queue_arr.arr[i] .havewriter) {
 						// unlock the mutex
 						mtx_query_queue_arr.unlock();
 						continue;
-					} else {
-						query_queue_arr.arr[i]
-						    .havereader = true;
-						std::thread{thread_starter,
-							    queryID}
-						    .detach();
+					} else 
+					{
+						query_queue_arr.arr[i].havereader = true;
+						std::thread{thread_starter, queryID}.detach();
+
 						// thread num--
+						mtx_present_thread_num.lock();
+						present_thread_num--;
+						mtx_present_thread_num.unlock();
+
 						query_queue_arr.arr[i].head++;
 						goto distribute;
 					}
-				} else if (query_queue_arr.arr[i]
-					       .query_data
-						   [query_queue_arr.arr[i].head]
-					       .write) {
-					if (query_queue_arr.arr[i].havereader ||
-					    query_queue_arr.arr[i].havewriter) {
+				} else 
+				if (query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].write) {
+					if (query_queue_arr.arr[i].havereader || query_queue_arr.arr[i].havewriter) {
 						// unlock the mutex
 						mtx_query_queue_arr.unlock();
 						continue;
 					} else {
-						query_queue_arr.arr[i]
-						    .havewriter = true;
-						std::thread{thread_starter,
-							    queryID}
-						    .detach();
+						query_queue_arr.arr[i].havewriter = true;
+						std::thread{thread_starter, queryID}.detach();
+
 						// thread num--
+						mtx_present_thread_num.lock();
+						present_thread_num--;
+						mtx_present_thread_num.unlock();
+
 						query_queue_arr.arr[i].head++;
 						goto distribute;
 					}
 				}
-				// if there's no thread remaining, sleep until
-				// awaken
+				// if there's no thread remaining, sleep until awaken
+
+				std::unique_lock<std::mutex> lock(mtx_present_thread_num);
+				if (present_thread_num>8) cd_real_thread_limit.wait(lock);
+
+				std::cout<<"pass wait\n";
 
 				// unlock the mutex
 				mtx_query_queue_arr.unlock();
 			}
 		}
 		// one loop finish
-		goto loop;
+		continue;
 	}
 }
 
