@@ -27,8 +27,10 @@ struct inf_qry {
 
 struct one_table_query {
 	//std::string table_name;
-	bool ifexist, havereader, havewriter; 
-	size_t head;
+	bool ifexist=true;
+	bool havereader=false;
+	bool havewriter=false; 
+	size_t head =0;
 	std::vector<inf_qry> query_data;
 };
 
