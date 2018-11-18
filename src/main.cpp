@@ -292,6 +292,13 @@ void scheduler()
 
 				//std::cout<<"distribute\n";
 				// if there's a thread remaining, do
+				std::unique_lock<std::mutex> lock(mtx_present_thread_num);
+				if (present_thread_num>8) cd_real_thread_limit.wait(lock);
+
+				std::cout<<"pass wait\n";
+
+
+
 				size_t queryID = query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
 
 				// tableID++    for loop
@@ -337,22 +344,12 @@ void scheduler()
 						goto distribute;
 					}
 				}
-				// if there's no thread remaining, sleep until awaken
-
-				std::unique_lock<std::mutex> lock(mtx_present_thread_num);
-				if (present_thread_num>8) cd_real_thread_limit.wait(lock);
-
-				std::cout<<"pass wait\n";
 
 				// unlock the mutex
 				mtx_query_queue_arr.unlock();
 			}
 		}
 		// one loop finish
-		std::unique_lock<std::mutex> lock(mtx_present_thread_num);
-		if (present_thread_num > 8) cd_real_thread_limit.wait(lock);
-
-		std::cout << "pass wait"<<present_thread_num<<endl;
 		continue;
 	}
 }
