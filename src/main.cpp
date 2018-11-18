@@ -294,10 +294,10 @@ void scheduler()
 
 		mtx_max_line_num.lock();
 		if ((max_line_num>0)&&(count_for_executed>max_line_num-1)){
-		mtx_max_line_num.unlock();
-		mtx_counter_for_result_reader.unlock();
-		break;
+			mtx_max_line_num.unlock();
+			break;
 		}
+		mtx_max_line_num.unlock();
 
 		for (size_t i = 0; i < query_queue_arr.arr.size(); ++i) {
 
@@ -309,6 +309,8 @@ void scheduler()
 					  << query_queue_arr.arr[i].reader_count
 					  << std::endl;
 			}
+
+			print_if_query_done_arr();
 
 			if (query_queue_arr.arr[i].ifexist) {
 				// lock the mutex
@@ -385,7 +387,6 @@ void scheduler()
 			}
 		}
 		// one loop finish
-		continue;
 	}
 }
 
@@ -515,7 +516,7 @@ int main(int argc, char *argv[])
     // read the listened file
     qq_reader(is,p,query_queue,query_queue_property,query_queue_arr);
 
-    std::thread result_reader_th{result_reader};
+    //std::thread result_reader_th{result_reader};
     std::thread scheduler_th{scheduler};
 
 
@@ -544,7 +545,7 @@ int main(int argc, char *argv[])
 
     scheduler_th.join();
     // wait for the result printing thread to end
-    result_reader_th.join();
+    //result_reader_th.join();
     std::cout<<"finish"<<endl;
     //std::this_thread::sleep_for(std::chrono::seconds(10));
 
