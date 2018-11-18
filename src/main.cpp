@@ -155,8 +155,10 @@ void qq_reader(std::istream &is, QueryParser &p,
 					// find the table name
 				} else {
 					// new table name
-					query_queue_arr.arr.emplace_back(
-					    std::move(one_table_query()));
+					//query_queue_arr.arr.emplace_back(
+					//    std::move(one_table_query()));
+					query_queue_arr.arr.push_back(one_table_query());
+
 					// just inserted index
 					int jii =
 					    query_queue_arr.arr.size() - 1;
@@ -326,6 +328,10 @@ void scheduler()
 			}
 		}
 		// one loop finish
+		std::unique_lock<std::mutex> lock(mtx_present_thread_num);
+		if (present_thread_num > 8) cd_real_thread_limit.wait(lock);
+
+		std::cout << "pass wait"<<present_thread_num<<endl;
 		continue;
 	}
 }

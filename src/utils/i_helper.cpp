@@ -6,7 +6,7 @@ using std::string;
 inf_qry getInformation(std::string qry, int& count)
 {
 	int size = qry.size();
-	int begin, end;
+	int begin=0, end=0;
 	inf_qry inf;
 	for (int i = 0; i < size; ++i) {
 		if (qry[i] == '=') {
