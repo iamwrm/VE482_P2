@@ -462,17 +462,20 @@ void result_reader()
 		//std::cerr << "just after while in cv" << counter_for_result_reader<< " "<< endl;
 
 		mtx_counter_for_result_reader.lock();
+		mtx_max_line_num.lock();
 		if (max_line_num>0&&counter_for_result_reader>max_line_num-1){
 			mtx_counter_for_result_reader.unlock();
+			mtx_max_line_num.unlock();
 			break;
 		}
 
+		mtx_max_line_num.unlock();
 		mtx_counter_for_result_reader.unlock();
 
+		back:
 		{
 			std::unique_lock<std::mutex> lock(mtx_query_queue_arr);
 
-				back:
 			if (if_query_done_arr[counter_for_result_reader] == false){
 				std::cerr << "in cv" << counter_for_result_reader<< " "<< endl;
 				readLimit.wait(lock);
@@ -482,39 +485,22 @@ void result_reader()
 
 		}
 
-        mtx_max_line_num.lock();
-        mtx_counter_for_result_reader.lock();
-
-        if ((max_line_num>0)&&(counter_for_result_reader>max_line_num-1)){
-        mtx_max_line_num.unlock();
-        mtx_counter_for_result_reader.unlock();
-            break;
-        }
-
-
-        mtx_max_line_num.unlock();
-        mtx_counter_for_result_reader.unlock();
-
-        
-
-		//print_if_query_done_arr();
-		QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
-
 		std::cerr << "in rr ------" << counter_for_result_reader<< " "<< endl;
 		//print_if_query_done_arr();
 
 		mtx_counter_for_result_reader.lock();
+
+		QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
 		cout<<counter_for_result_reader+1<<endl;
 		if (result->display()){
 			std::cout << *result;
+			std::cout.flush();
 		} else{
 		std::cerr << *result;
 		}
-		mtx_counter_for_result_reader.unlock();
-
-        mtx_counter_for_result_reader.lock();
 		counter_for_result_reader++;
         mtx_counter_for_result_reader.unlock();
+
 		std::cerr << "in rr -finished-----" << counter_for_result_reader<<
 		" "<< endl;
 	}
