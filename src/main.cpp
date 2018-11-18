@@ -227,14 +227,15 @@ void scheduler()
 	while (1) {
     loop:
         for(size_t i = 0; i < query_queue_arr.arr.size(); ++i){
-            //if there is thread remaining
             size_t queryID =
 		    query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
             //if table exist
             if(query_queue_arr.arr[i].ifexist){
-            distribute:
                 //lock the mutex
+            distribute:
+                //if there's a thread remaining, do
                 if(query_queue_arr.arr[i].head>=query_queue_arr.arr[i].query_data.size()){
+                    //unlock the mutex
                     continue;
                 }
                 if(query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].read){
@@ -245,6 +246,7 @@ void scheduler()
                         goto distribute;
                     }
                     else if(query_queue_arr.arr[i].havewriter){
+                        //unlock the mutex
                         continue;
                     }
                     else{
@@ -257,6 +259,7 @@ void scheduler()
                 }
                 else if(query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].write){
                     if(query_queue_arr.arr[i].havereader||query_queue_arr.arr[i].havewriter){
+                        //unlock the mutex
                         continue;
                     }
                     else{
@@ -267,9 +270,10 @@ void scheduler()
                         goto distribute;
                     }
                 }
+                //if there's no thread remaining, sleep until awaken
+                
                 //unlock the mutex
             }
-            //if there is no thread remaining, sleep until awaken
         }
         // one loop finish
         goto loop;
