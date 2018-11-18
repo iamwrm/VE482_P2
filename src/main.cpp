@@ -170,14 +170,16 @@ void qq_reader(std::istream &is, QueryParser &p,
 					//    std::move(one_table_query()));
 					query_queue_arr.arr.emplace_back(one_table_query());
 
-					// just inserted index
-					unsigned long jii =
-					    query_queue_arr.arr.size() - 1;
 
-					query_queue_arr.table_name.insert(
-					    std::pair<std::string, int>(
-						local_inf_qry.targetTable,
-						jii));
+						// just inserted index
+						unsigned long jii =
+						    query_queue_arr.arr.size() -
+						    1;
+
+					if (query_string[0 + 8] == 'L' &&
+					    query_string[3 + 8] == 'd'){ query_queue_arr.arr[jii].ifexist=true;}
+
+					query_queue_arr.table_name.insert( std::pair<std::string, int>( local_inf_qry.targetTable, jii));
 
 					query_queue_arr.arr[jii]
 					    .query_data.emplace_back(
@@ -220,13 +222,26 @@ void thread_starter(int queryID)
    } 
    mtx_query_result_queue.unlock();
 
-   mtx_present_thread_num.lock();
-   present_thread_num++;
-   mtx_present_thread_num.unlock();
+   mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
+
 
 
 
 	query_result_queue[queryID]= query_queue[queryID]->execute();
+
+   // TODO: set if the query is copy table
+	std::string this_query_string = query_queue[queryID]->toString();
+	int a =0;
+	inf_qry local_inf_qry=getInformation(this_query_string,a);
+	std::string new_table_name = local_inf_qry.newTable;
+	
+
+	mtx_query_queue_arr.lock();
+	if (this_query_string[0 + 8] == 'C' && this_query_string[3 + 8] == 'y') {
+		int idx =query_queue_arr.table_name.find(new_table_name)->second;
+		query_queue_arr.arr[idx].ifexist=true;
+	}
+	mtx_query_queue_arr.unlock();
 
 
 	mtx_present_thread_num.lock();
@@ -242,14 +257,9 @@ void thread_starter(int queryID)
    mtx_if_query_done_arr.unlock();
 
 
-   mtx_present_thread_num.lock();
-   present_thread_num--;
-   mtx_present_thread_num.unlock();
+   mtx_present_thread_num.lock(); present_thread_num--; mtx_present_thread_num.unlock();
 
-
-   mtx_count_for_executed.lock();
-   count_for_executed++;
-   mtx_count_for_executed.unlock();
+   mtx_count_for_executed.lock(); count_for_executed++; mtx_count_for_executed.unlock();
 
    readLimit.notify_one();
    cd_real_thread_limit.notify_one();
