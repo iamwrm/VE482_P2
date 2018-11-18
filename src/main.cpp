@@ -227,13 +227,12 @@ void scheduler()
 	while (1) {
     loop:
         for(size_t i = 0; i < query_queue_arr.arr.size(); ++i){
-            size_t queryID =
-		    query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
-            //if table exist
             if(query_queue_arr.arr[i].ifexist){
                 //lock the mutex
             distribute:
                 //if there's a thread remaining, do
+                size_t queryID =
+                    query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
                 if(query_queue_arr.arr[i].head>=query_queue_arr.arr[i].query_data.size()){
                     //unlock the mutex
                     continue;
