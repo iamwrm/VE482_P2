@@ -14,6 +14,7 @@ using std::endl;
 using std::cout;
 using std::vector;
 
+bool in_stdin=false;
 bool has_quit=false;
 std::mutex mtx_has_quit;
 
@@ -495,6 +496,7 @@ int main(int argc, char *argv[])
     if (parsedArgs.listen.empty()) {
         std::cerr << "lemondb: warning: --listen argument not found, use stdin instead in debug mode" << std::endl;
         is.rdbuf(std::cin.rdbuf());
+	in_stdin=true;
     }
 #endif
 
@@ -507,6 +509,8 @@ int main(int argc, char *argv[])
     } else {
         std::cerr << "lemondb: info: running in " << parsedArgs.threads << " threads" << std::endl;
     }
+
+	if (!in_stdin){
 
 
     QueryParser p;
@@ -567,5 +571,47 @@ int main(int argc, char *argv[])
 	//std::cerr<<"--------------out of quit";
     //std::this_thread::sleep_for(std::chrono::seconds(10));
 
+    return 0; } // if !in_stdin
+	else{
+
+		  QueryParser p;
+
+    p.registerQueryBuilder(std::make_unique<QueryBuilder(Debug)>());
+    p.registerQueryBuilder(std::make_unique<QueryBuilder(ManageTable)>());
+    p.registerQueryBuilder(std::make_unique<QueryBuilder(Complex)>());
+
+		 while (is) {
+        try {
+            // A very standard REPL
+            // REPL: Read-Evaluate-Print-Loop
+            std::string queryStr = extractQueryString(is);
+            Query::Ptr query = p.parseQuery(queryStr);
+            QueryResult::Ptr result = query->execute();
+            std::cout << ++counter << "\n";
+            if (result->success()) {
+                if (result->display()) {
+                    std::cout << *result;
+                } else {
+#ifndef NDEBUG
+                    std::cout.flush();
+                    std::cerr << *result;
+#endif
+                }
+            } else {
+                std::cout.flush();
+                std::cerr << "QUERY FAILED:\n\t" << *result;
+            }
+        }  catch (const std::ios_base::failure& e) {
+            // End of input
+            break;
+        } catch (const std::exception& e) {
+            std::cout.flush();
+            std::cerr << e.what() << std::endl;
+        }
+    }
+
     return 0;
+
+	}
+
 }
