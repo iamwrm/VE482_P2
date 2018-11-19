@@ -322,11 +322,12 @@ void scheduler()
 
 				distribute:
 
-				if (present_thread_num > (int)std::thread::hardware_concurrency()||present_thread_num>8) {
-
-				std::unique_lock<std::mutex> lock(mtx_present_thread_num);
-				cd_real_thread_limit.wait(lock,[]{return present_thread_num < 8 && present_thread_num <(int)std::thread::hardware_concurrency();});
-
+				{
+					std::unique_lock<std::mutex> lock(mtx_present_thread_num);
+					
+					if (present_thread_num > (int)std::thread::hardware_concurrency()||present_thread_num>8) {
+					cd_real_thread_limit.wait(lock,[]{return present_thread_num <= 8 && present_thread_num <(int)std::thread::hardware_concurrency();});
+					}
 				}
 
 
