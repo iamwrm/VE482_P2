@@ -14,6 +14,9 @@ using std::endl;
 using std::cout;
 using std::vector;
 
+bool has_quit=false;
+std::mutex mtx_has_quit;
+
 std::mutex mtx_query_queue;
 std::mutex mtx_query_result_queue;
 std::mutex mtx_query_queue_property;
@@ -160,6 +163,9 @@ void qq_reader(std::istream &is, QueryParser &p,
 			if (query_string[0 + 8] == 'Q' && query_string[3 + 8] == 't') {
 				query_queue_arr.quit_query = local_inf_qry;
 				mtx_query_queue_arr.unlock();
+				mtx_has_quit.lock();
+				has_quit=true;
+				mtx_has_quit.unlock();
 				mtx_max_line_num.lock();
 				counter++;
 				mtx_max_line_num.unlock();
@@ -203,7 +209,13 @@ void qq_reader(std::istream &is, QueryParser &p,
 		}
 	}
 	mtx_max_line_num.lock();
-	max_line_num = counter-1;
+	mtx_has_quit.lock();
+	if (has_quit) {
+		max_line_num = counter - 1;
+	} else {
+		max_line_num = counter - 0;
+	}
+	mtx_has_quit.unlock();
 	mtx_max_line_num.unlock();
 	//std::cerr<<"max query:"<<max_line_num<<query_queue[max_line_num]->toString()<<endl;
 }
@@ -532,7 +544,7 @@ int main(int argc, char *argv[])
     //std::cout<<"finish"<<endl;
 
 	//std::cerr<<"--------------out of while";
-	query_queue[max_line_num]->execute();
+	//query_queue[max_line_num]->execute();
 	//std::cerr<<"--------------out of quit";
     //std::this_thread::sleep_for(std::chrono::seconds(10));
 
