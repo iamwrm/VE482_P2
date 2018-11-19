@@ -61,7 +61,7 @@ std::mutex mtx_if_query_done_arr;
 
 std::vector<Query::Ptr> query_queue;
 
-std::vector<QueryResult::Ptr> query_result_queue(10);
+std::vector<QueryResult::Ptr> query_result_queue;
 
 std::mutex mtx_print_if;
 
@@ -131,8 +131,6 @@ void qq_reader(std::istream &is, QueryParser &p,
 	       Query_queue_arr &query_queue_arr)
 {
 	// This function is in the main thread
-	//
-	//
 	while (is) {
 		try {
 			std::string queryStr = extractQueryString(is);
@@ -145,72 +143,40 @@ void qq_reader(std::istream &is, QueryParser &p,
 
 			// ==============================
 			mtx_query_queue_property.lock();
-
-			/*
-				    query_queue_property.emplace_back(
-					std::move(getInformation(
-					    query_queue[query_queue.size() -
-			   1]->toString(), count_for_getInformation)));
-			*/
-
 			inf_qry local_inf_qry = getInformation(
 			    query_queue[query_queue.size() - 1]->toString(),
 			    count_for_getInformation);
-
 			mtx_query_queue_property.unlock();
 			// ==============================
-			std::string query_string =
-			    query_queue[query_queue.size() - 1]->toString();
+
+			std::string query_string = query_queue[query_queue.size() - 1]->toString();
 
 			int local_query_id = local_inf_qry.line;
 
-			mtx_if_query_done_arr.lock();
-			if_query_done_arr.push_back(false);
-			mtx_if_query_done_arr.unlock();
+			mtx_if_query_done_arr.lock(); if_query_done_arr.push_back(false); mtx_if_query_done_arr.unlock();
 
-			mtx_query_result_queue.lock();
-			query_result_queue.push_back(nullptr);
-			mtx_query_result_queue.unlock();
+			mtx_query_result_queue.lock(); query_result_queue.push_back(nullptr); mtx_query_result_queue.unlock();
 
 			mtx_query_queue_arr.lock();
-			if (query_string[0 + 8] == 'Q' &&
-			    query_string[3 + 8] == 't') {
-				//std::cout << "find Quit!:" << counter
-				//<< std::endl;
+			if (query_string[0 + 8] == 'Q' && query_string[3 + 8] == 't') {
 				query_queue_arr.quit_query = local_inf_qry;
+			} else  if (query_queue_arr.table_name.find( local_inf_qry.targetTable) != query_queue_arr.table_name.end()) {
+				auto it = query_queue_arr.table_name.find( local_inf_qry.targetTable);
+				query_queue_arr.arr[it->second] .query_data.emplace_back( std::move(local_inf_qry));
 			} else {
-				if (query_queue_arr.table_name.find(
-					local_inf_qry.targetTable) !=
-				    query_queue_arr.table_name.end()) {
-					auto it =
-					    query_queue_arr.table_name.find(
-						local_inf_qry.targetTable);
+				// new table name
+				//query_queue_arr.arr.emplace_back(
+				//    std::move(one_table_query()));
+				query_queue_arr.arr.emplace_back(one_table_query());
 
-					query_queue_arr.arr[it->second]
-					    .query_data.emplace_back(
-						std::move(local_inf_qry));
-					// find the table name
-				} else {
-					// new table name
-					//query_queue_arr.arr.emplace_back(
-					//    std::move(one_table_query()));
-					query_queue_arr.arr.emplace_back(one_table_query());
+				unsigned long jii = query_queue_arr.arr.size() - 1;
 
+				if (query_string[0 + 8] == 'L' && query_string[3 + 8] == 'd'){
+					 query_queue_arr.arr[jii].ifexist=true;}
 
-						// just inserted index
-						unsigned long jii =
-						    query_queue_arr.arr.size() -
-						    1;
+				query_queue_arr.table_name.insert( std::pair<std::string, int>( local_inf_qry.targetTable, jii));
 
-					if (query_string[0 + 8] == 'L' &&
-					    query_string[3 + 8] == 'd'){ query_queue_arr.arr[jii].ifexist=true;}
-
-					query_queue_arr.table_name.insert( std::pair<std::string, int>( local_inf_qry.targetTable, jii));
-
-					query_queue_arr.arr[jii]
-					    .query_data.emplace_back(
-						std::move(local_inf_qry));
-				}
+				query_queue_arr.arr[jii] .query_data.emplace_back( std::move(local_inf_qry));
 			}
 			mtx_query_queue_arr.unlock();
 
@@ -219,11 +185,11 @@ void qq_reader(std::istream &is, QueryParser &p,
 			count_for_getInformation++;  // record the line of query
 			mtx_count_for_getInformation.unlock();
 
-			// std::cout << "in qq:" << count_for_getInformation
-			//	  << endl;
 
 			threadLimit.notify_one();
+			mtx_max_line_num.lock();
 			counter++;
+			mtx_max_line_num.unlock();
 		} catch (const std::ios_base::failure &e) {
 			// End of input
 			break;
@@ -241,21 +207,17 @@ void qq_reader(std::istream &is, QueryParser &p,
 // TODO:
 void thread_starter(int queryID)
 {
-   cd_real_thread_limit.notify_one();
+	cd_real_thread_limit.notify_one();
 	//std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
-   //if ((size_t)queryID>query_result_queue.size()-1){
-    //   query_result_queue.resize(2 * queryID);
-   //} 
 
-   mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
-
-
+	mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 
 	query_result_queue[queryID]= query_queue[queryID]->execute();
 
-   // TODO: set if the query is copy table
+	// TODO: set if the query is copy table
 	std::string this_query_string = query_queue[queryID]->toString();
-	int a =0;
+
+	int a;
 	inf_qry local_inf_qry=getInformation(this_query_string,a);
 	std::string new_table_name = local_inf_qry.newTable;
 	std::string this_table_name = local_inf_qry.targetTable;
@@ -263,7 +225,7 @@ void thread_starter(int queryID)
 	mtx_query_queue_arr.lock();
 	if (local_inf_qry.write){
 		int idx =query_queue_arr.table_name.find(this_table_name)->second;
-	//std::cerr<<"in thread starter write queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
+		//std::cerr<<"in thread starter write queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
 		query_queue_arr.arr[idx].havewriter=false;
 		query_queue_arr.arr[idx].havereader=false;
 		query_queue_arr.arr[idx].reader_count=0;
@@ -276,6 +238,7 @@ void thread_starter(int queryID)
 		}
 		query_queue_arr.arr[idx].havewriter=false;
 	}
+
 	if (this_query_string[0 + 8] == 'C' && this_query_string[3 + 8] == 'y') {
 		int idx =query_queue_arr.table_name.find(new_table_name)->second;
 		query_queue_arr.arr[idx].ifexist=true;
@@ -298,39 +261,24 @@ void thread_starter(int queryID)
 	}
 	mtx_query_queue_arr.unlock();
 
+	mtx_if_query_done_arr.lock(); if_query_done_arr[queryID] = true; mtx_if_query_done_arr.unlock();
 
-	mtx_present_thread_num.lock();
-	//std::cerr<<"in thread starter FINISHED queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
+	mtx_present_thread_num.lock(); 
+	present_thread_num--;
+	//std::cerr<<"minus ptn"<<present_thread_num<<std::endl;
 	mtx_present_thread_num.unlock();
 
+	mtx_count_for_executed.lock(); count_for_executed++; mtx_count_for_executed.unlock();
 
-   mtx_if_query_done_arr.lock();
-   if_query_done_arr[queryID] = true;
-   mtx_if_query_done_arr.unlock();
-
-
-   mtx_present_thread_num.lock(); 
-   present_thread_num--;
-   //std::cerr<<"minus ptn"<<present_thread_num<<std::endl;
-   mtx_present_thread_num.unlock();
-   //mtx_present_thread_num.lock(); present_thread_num=7; mtx_present_thread_num.unlock();
-
-   mtx_count_for_executed.lock(); count_for_executed++; mtx_count_for_executed.unlock();
-
-   readLimit.notify_one();
-   //readLimit.notify_all();
-   cd_real_thread_limit.notify_one();
-   cd_nothing_to_do.notify_all();
-   cd_nothing_to_do_2.notify_all();
+	readLimit.notify_one();
+	cd_real_thread_limit.notify_one();
+	cd_nothing_to_do.notify_all();
+	cd_nothing_to_do_2.notify_all();
 }
 
 // TODO:
 void scheduler()
 {
-	// inspect whether the thread number is bigger than the MAX number;
-
-	//
-	// int ttt = 0;
 
 	// while (1) {
 	while (1) {

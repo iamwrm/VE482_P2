@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.7)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -pedantic -Wno-unused-result -Wno-unused-parameter -Wno-unused-variable")
+set(CMAKE_CXX_FLAGS "-Wall -O2 -Wextra -Werror -pedantic -Wno-unused-result -Wno-unused-parameter -Wno-unused-variable")
 
 set(SOURCE_FILES
         db/Database.cpp db/Database.h
