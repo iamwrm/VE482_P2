@@ -276,7 +276,7 @@ void thread_starter(int queryID)
 	cd_nothing_to_do_2.notify_all();
 
 	mtx_present_thread_num.lock();
-	std::cerr<<"in thread FINISH queryID:"<<queryID<<" resentTH:"<<present_thread_num<<std::endl;
+	std::cerr<<"FINISH qID:"<<queryID<<" tbl:"<<this_table_name<<" Th:"<<present_thread_num<<"w:"<< " \n";
 	mtx_present_thread_num.unlock();
 }
 
@@ -303,11 +303,11 @@ void scheduler()
 			cd_nothing_to_do.notify_all();
 			cd_nothing_to_do_2.notify_all();
 			
-			/*
-			std::cerr << "i:" << i << query_queue_arr.arr[i].query_data[0].targetTable << "head:" << query_queue_arr.arr[i].head<<"|" << query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line<< endl;
+			mtx_query_queue_arr.lock();
+			std::cerr << "i:" << i << query_queue_arr.arr[i].query_data[0].targetTable << "head:" << query_queue_arr.arr[i].head<<"|" << query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line<< "\n";
 			for (size_t j = 0; j < query_queue_arr.arr.size(); ++j) {
-			std::cerr << query_queue_arr.arr[j].havereader << query_queue_arr.arr[j].havewriter << " " << query_queue_arr.arr[j].reader_count << std::endl;}
-			*/
+			std::cerr << query_queue_arr.arr[j].havereader << query_queue_arr.arr[j].havewriter << " " << query_queue_arr.arr[j].reader_count << "\n";}
+			mtx_query_queue_arr.unlock();
 			
 
 
@@ -429,11 +429,12 @@ void result_reader()
 			mtx_max_line_num.unlock();
 			break;
 		}
-
 		mtx_max_line_num.unlock();
 		mtx_counter_for_result_reader.unlock();
 
+
 		back:
+
 		{
 			std::unique_lock<std::mutex> lock(mtx_query_queue_arr);
 
@@ -452,17 +453,18 @@ void result_reader()
 		mtx_counter_for_result_reader.lock();
 
 		QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
-		assert(result);
-		cout<<counter_for_result_reader+1<<endl;
+
+		std::cout<<counter_for_result_reader+1<<"\n";
 			//std::cout << "|"<<counter_for_result_reader+1<<std::endl;
 		if (result->display()){
 			std::cout << *result;
-			std::cout.flush();
+			//std::cout.flush();
 		} else{
-		std::cerr << *result;
+			std::cerr << *result;
 		}
 		counter_for_result_reader++;
-        mtx_counter_for_result_reader.unlock();
+
+		mtx_counter_for_result_reader.unlock();
 
 		//std::cerr << "in rr -finished-----" << counter_for_result_reader<< " "<< endl;
 	}
