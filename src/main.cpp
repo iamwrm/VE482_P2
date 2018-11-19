@@ -274,11 +274,12 @@ void thread_starter(int queryID)
 	}
 	mtx_query_queue_arr.unlock();
 
-	mtx_if_query_done_arr.lock(); if_query_done_arr[queryID] = true; mtx_if_query_done_arr.unlock();
 
 	mtx_present_thread_num.lock(); present_thread_num--; mtx_present_thread_num.unlock();
 
 	mtx_count_for_executed.lock(); count_for_executed++; mtx_count_for_executed.unlock();
+
+	mtx_if_query_done_arr.lock(); if_query_done_arr[queryID] = true; mtx_if_query_done_arr.unlock();
 
 	cd_read_limit.notify_one();
 	cd_real_thread_limit.notify_one();
@@ -435,7 +436,8 @@ void result_reader()
 		//std::cerr << "in rr ------" << counter_for_result_reader<< " "<< endl;
 		//print_if_query_done_arr();
 
-		QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
+		QueryResult::Ptr result = std::move(query_result_queue[counter_for_result_reader]);
+
 		std::cout<<counter_for_result_reader+1;
 		std::cout<<"\n";
 
