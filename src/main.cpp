@@ -277,22 +277,20 @@ void thread_starter(int queryID)
 
 	readLimit.notify_one();
 	cd_real_thread_limit.notify_one();
-	cd_nothing_to_do.notify_all();
-	cd_nothing_to_do_2.notify_all();
+	cd_nothing_to_do.notify_one();
+	cd_nothing_to_do_2.notify_one();
 
 	mtx_present_thread_num.lock();
-	std::cerr<<"FINISH qID:"<<queryID<<" tbl:"<<this_table_name<<" Th:"<<present_thread_num<<"w:"<< " \n";
+	std::cerr << "FINISH qID:" << queryID << " tbl:" << this_table_name
+		  << " Th:" << present_thread_num << "w:" << local_inf_qry.write
+		  << "r:" << local_inf_qry.read << " \n";
 	mtx_present_thread_num.unlock();
 }
 
 // TODO:
 void scheduler()
 {
-
-	// while (1) {
 	while (1) {
-
-		//print_if_query_done_arr();
 
 		mtx_max_line_num.lock();
 		if ((max_line_num>0)&&(count_for_executed>max_line_num-1)){
@@ -305,23 +303,19 @@ void scheduler()
 
 
 		for (size_t i = 0; i < query_queue_arr.arr.size(); ++i) {
-			cd_nothing_to_do.notify_all();
-			cd_nothing_to_do_2.notify_all();
-			
+			/*
 			mtx_query_queue_arr.lock();
 			std::cerr << "i:" << i << query_queue_arr.arr[i].query_data[0].targetTable << "head:" << query_queue_arr.arr[i].head<<"|" << query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line<< "\n";
 			for (size_t j = 0; j < query_queue_arr.arr.size(); ++j) {
 			std::cerr << query_queue_arr.arr[j].havereader << query_queue_arr.arr[j].havewriter << " " << query_queue_arr.arr[j].reader_count << "\n";}
 			mtx_query_queue_arr.unlock();
-			
-
-
+			*/
 			if (query_queue_arr.arr[i].ifexist) {
-				// lock the mutex
 
 				distribute:
 
 				tryagain:
+
 				mtx_query_queue_arr.lock();
 
 				//std::cout<<"distribute\n";
