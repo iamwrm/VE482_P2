@@ -22,7 +22,7 @@ std::vector<inf_qry> query_queue_property;
 
 
 std::condition_variable  threadLimit;
-std::condition_variable  readLimit;
+std::condition_variable  cd_read_limit;
 
 std::condition_variable  cd_real_thread_limit;
 int present_thread_num = 0;
@@ -65,9 +65,8 @@ std::vector<QueryResult::Ptr> query_result_queue;
 
 std::mutex mtx_print_if;
 
-std::condition_variable cd_nothing_to_do;
+std::condition_variable cd_if_executed;
 
-std::condition_variable cd_nothing_to_do_2;
 
 std::mutex mtx_nothing_to_do;
 
@@ -212,7 +211,6 @@ void qq_reader(std::istream &is, QueryParser &p,
 // TODO:
 void thread_starter(int queryID)
 {
-	cd_real_thread_limit.notify_one();
 	//std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
 
 	mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
@@ -222,12 +220,14 @@ void thread_starter(int queryID)
 	// TODO: set if the query is copy table
 	std::string this_query_string = query_queue[queryID]->toString();
 
-	int a;
-	inf_qry local_inf_qry=getInformation(this_query_string,a);
+	int unuseful;
+	inf_qry local_inf_qry=getInformation(this_query_string,unuseful);
+
 	std::string new_table_name = local_inf_qry.newTable;
 	std::string this_table_name = local_inf_qry.targetTable;
 
 	mtx_query_queue_arr.lock();
+
 	if (local_inf_qry.write){
 		int idx =query_queue_arr.table_name.find(this_table_name)->second;
 		//std::cerr<<"in thread starter write queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
@@ -235,6 +235,7 @@ void thread_starter(int queryID)
 		query_queue_arr.arr[idx].havereader=false;
 		query_queue_arr.arr[idx].reader_count=0;
 	}
+
 	if (local_inf_qry.read) {
 		int idx = query_queue_arr.table_name.find(this_table_name)->second;
 		query_queue_arr.arr[idx].reader_count--;
@@ -268,22 +269,22 @@ void thread_starter(int queryID)
 
 	mtx_if_query_done_arr.lock(); if_query_done_arr[queryID] = true; mtx_if_query_done_arr.unlock();
 
-	mtx_present_thread_num.lock(); 
-	present_thread_num--;
-	//std::cerr<<"minus ptn"<<present_thread_num<<std::endl;
-	mtx_present_thread_num.unlock();
+	mtx_present_thread_num.lock(); present_thread_num--; mtx_present_thread_num.unlock();
 
 	mtx_count_for_executed.lock(); count_for_executed++; mtx_count_for_executed.unlock();
 
-	readLimit.notify_one();
+	cd_read_limit.notify_one();
 	cd_real_thread_limit.notify_one();
-	cd_nothing_to_do.notify_one();
-	cd_nothing_to_do_2.notify_one();
+	cd_if_executed.notify_one();
 
 	mtx_present_thread_num.lock();
+
+	
+	/*
 	std::cerr << "FINISH qID:" << queryID << " tbl:" << this_table_name
 		  << " Th:" << present_thread_num << "w:" << local_inf_qry.write
 		  << "r:" << local_inf_qry.read << " \n";
+		  */
 	mtx_present_thread_num.unlock();
 }
 
@@ -314,29 +315,15 @@ void scheduler()
 
 				distribute:
 
-				tryagain:
+				if (present_thread_num > (int)std::thread::hardware_concurrency()||present_thread_num>8) {
 
-				mtx_query_queue_arr.lock();
-
-				//std::cout<<"distribute\n";
-				// if there's a thread remaining, do
-				{
-					std::unique_lock<std::mutex> lock( mtx_nothing_to_do_2);
-
-					mtx_present_thread_num.lock();
-					if (present_thread_num > (int)std::thread::hardware_concurrency()||present_thread_num>8) {
-						std::cerr << " wait for thread\n";
-						mtx_present_thread_num.unlock();
-
-						mtx_query_queue_arr.unlock();
-						cd_nothing_to_do_2.wait(lock);
-						std::cerr<<"pass wait for thread "<<present_thread_num<<endl;
-						goto tryagain;
-						//cd_real_thread_limit.notify_one();
-					}
-					mtx_present_thread_num.unlock();
+				std::unique_lock<std::mutex> lock(mtx_present_thread_num);
+				cd_real_thread_limit.wait(lock,[]{return present_thread_num < 8 && present_thread_num <(int)std::thread::hardware_concurrency();});
 
 				}
+
+
+				mtx_query_queue_arr.lock();
 
 				size_t queryID = query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
 
@@ -406,7 +393,7 @@ void scheduler()
 
 		if (!have_executed){
 		std::unique_lock<std::mutex> lock(mtx_nothing_to_do);
-		cd_nothing_to_do.wait(lock);
+		cd_if_executed.wait(lock);
 		}
 
 
@@ -421,54 +408,38 @@ void result_reader()
 	while (1) {
 		//std::cerr << "just after while in cv" << counter_for_result_reader<< " "<< endl;
 
-		mtx_counter_for_result_reader.lock();
 		mtx_max_line_num.lock();
 		if (max_line_num>0&&counter_for_result_reader>max_line_num-1){
-			mtx_counter_for_result_reader.unlock();
 			mtx_max_line_num.unlock();
 			break;
 		}
 		mtx_max_line_num.unlock();
-		mtx_counter_for_result_reader.unlock();
 
 
 		// check if counter is bigger than executed
-		while (1)
 		{
 			std::unique_lock<std::mutex> lock(mtx_query_queue_arr);
-
-			if (if_query_done_arr[counter_for_result_reader] != true){
-				//std::cerr << "in cv" << counter_for_result_reader<< " "<< endl;
-				mtx_query_queue_arr.unlock();
-				readLimit.wait(lock);
-				continue;
-				//std::cerr << "wake up" << counter_for_result_reader<< " "<< endl;
-			}
-			break;
+			cd_read_limit.wait(lock,[]{return if_query_done_arr[counter_for_result_reader];});
 		}
 
 		//std::cerr << "in rr ------" << counter_for_result_reader<< " "<< endl;
 		//print_if_query_done_arr();
 
-		mtx_counter_for_result_reader.lock();
-
 		QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
 		std::cout<<counter_for_result_reader+1<<"\n";
 
-		mtx_counter_for_result_reader.unlock();
 			//std::cout << "|"<<counter_for_result_reader+1<<std::endl;
 		if (result->display()){
 			std::cout << *result;
-			//std::cout.flush();
+			std::cout.flush();
 		} else{
 			//std::cerr << *result;
 		}
 
-		mtx_counter_for_result_reader.lock();
 		counter_for_result_reader++;
+		mtx_counter_for_result_reader.lock();
+		//std::cerr << "in rr -finished-----" << counter_for_result_reader<< " "<< "\n";
 		mtx_counter_for_result_reader.unlock();
-
-		//std::cerr << "in rr -finished-----" << counter_for_result_reader<< " "<< endl;
 	}
 }
 
@@ -522,14 +493,6 @@ int main(int argc, char *argv[])
     p.registerQueryBuilder(std::make_unique<QueryBuilder(ManageTable)>());
     p.registerQueryBuilder(std::make_unique<QueryBuilder(Complex)>());
 
-
-
-    // QueryResult::Ptr result = query->execute();
-
-    // TODO: a table for each query
-
-
-    // TODO: output result
 
 
     // read the listened file
