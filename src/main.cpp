@@ -22,7 +22,7 @@ std::mutex mtx_query_queue;
 std::mutex mtx_query_result_queue;
 std::mutex mtx_query_queue_property;
 
-std::vector<inf_qry> query_queue_property;
+//std::vector<inf_qry> query_queue_property;
 
 
 std::condition_variable  threadLimit;
@@ -34,7 +34,7 @@ std::mutex mtx_present_thread_num;
 
 
 
-std::vector<std::mutex> query_arr_mtx(10);
+//std::vector<std::mutex> query_arr_mtx(10);
 
 
 
@@ -75,6 +75,7 @@ std::mutex mtx_scheduler_sleep;
 
 std::mutex mtx_nothing_to_do_2;
 
+/*
 void print_if_query_done_arr()
 {
 	return;
@@ -90,6 +91,7 @@ void print_if_query_done_arr()
 	cout << endl;
 	mtx_print_if.unlock();
 }
+*/
 
 // from liu
 size_t counter = 0;
@@ -145,18 +147,14 @@ void qq_reader(std::istream &is, QueryParser &p,
 			mtx_query_queue.unlock();
 
 			// ==============================
-			mtx_query_queue_property.lock();
-			inf_qry local_inf_qry = getInformation(
-			    query_queue[query_queue.size() - 1]->toString(),
-			    count_for_getInformation);
-			mtx_query_queue_property.unlock();
+			inf_qry local_inf_qry = getInformation( query_queue[query_queue.size() - 1]->toString(), count_for_getInformation);
 			// ==============================
 
 			std::string query_string = query_queue[query_queue.size() - 1]->toString();
 
 			int local_query_id = local_inf_qry.line;
 
-			mtx_if_query_done_arr.lock(); if_query_done_arr.push_back(false); mtx_if_query_done_arr.unlock();
+			if_query_done_arr.push_back(false); 
 
 			mtx_query_result_queue.lock(); query_result_queue.push_back(nullptr); mtx_query_result_queue.unlock();
 
@@ -221,7 +219,6 @@ void thread_starter(int queryID)
 {
 	//std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
 
-	mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 
 	query_result_queue[queryID]= query_queue[queryID]->execute();
 
@@ -324,15 +321,17 @@ void scheduler()
 
 				distribute:
 
+				{
 					mtx_query_queue_arr.unlock();
 				{
 					std::unique_lock<std::mutex> lock(mtx_present_thread_num);
 					
-					if (present_thread_num > (int)std::thread::hardware_concurrency()||present_thread_num>8) {
-					cd_real_thread_limit.wait(lock,[]{return present_thread_num <= 8 && present_thread_num <(int)std::thread::hardware_concurrency();});
+					if (present_thread_num > (int)std::thread::hardware_concurrency()-4||present_thread_num>8) {
+					cd_real_thread_limit.wait(lock,[]{return present_thread_num <= 8 && present_thread_num <=(int)std::thread::hardware_concurrency()-4;});
 					}
 				}
 					mtx_query_queue_arr.lock();
+				}
 
 
 				size_t queryID = query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line;
@@ -349,10 +348,11 @@ void scheduler()
 				if (query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].read) {
 					if (query_queue_arr.arr[i].havereader) {
 
-						query_queue_arr.arr[i].reader_count++;
 
-						have_executed = true;
+						mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
+						query_queue_arr.arr[i].reader_count++;
 						std::thread{thread_starter, queryID}.detach();
+						have_executed = true;
 
 						// thread num--
 
@@ -366,11 +366,12 @@ void scheduler()
 						continue;
 					} else 
 					{
+
+						mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 						query_queue_arr.arr[i].havereader = true;
 						query_queue_arr.arr[i].reader_count=1;
-
-						have_executed = true;
 						std::thread{thread_starter, queryID}.detach();
+						have_executed = true;
 
 						query_queue_arr.arr[i].head++;
 						//mtx_query_queue_arr.unlock();
@@ -383,9 +384,10 @@ void scheduler()
 						//mtx_query_queue_arr.unlock();
 						continue;
 					} else {
+						mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 						query_queue_arr.arr[i].havewriter = true;
-						have_executed = true;
 						std::thread{thread_starter, queryID}.detach();
+						have_executed = true;
 
 						query_queue_arr.arr[i].head++;
 						//mtx_query_queue_arr.unlock();
@@ -522,8 +524,9 @@ int main(int argc, char *argv[])
     std::cerr<<"after qpp\n";
 
 
+std::vector<inf_qry> 	place_hd_iqv;
     // read the listened file
-    qq_reader(is,p,query_queue,query_queue_property,query_queue_arr);
+    qq_reader(is,p,query_queue,place_hd_iqv,query_queue_arr);
 
     std::cerr<<"after qq_reader\n";
 
@@ -557,7 +560,7 @@ int main(int argc, char *argv[])
     std::thread result_reader_th{result_reader};
     std::cerr<<"after result_reader\n";
     
-    std::thread {shouting}.detach();
+    //std::thread {shouting}.detach();
     std::cerr<<"after shouting\n";
 
 	// shouting 
