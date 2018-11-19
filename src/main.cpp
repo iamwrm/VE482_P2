@@ -461,7 +461,7 @@ void shouting(){
 	cd_read_limit.notify_one();
 	cd_real_thread_limit.notify_one();
 	cd_scheduler_sleep.notify_one();
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 	}
 }
 
