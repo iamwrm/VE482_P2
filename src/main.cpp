@@ -438,18 +438,19 @@ void result_reader()
 		mtx_counter_for_result_reader.unlock();
 
 
-		back:
-
+		// check if counter is bigger than executed
+		while (1)
 		{
 			std::unique_lock<std::mutex> lock(mtx_query_queue_arr);
 
 			if (if_query_done_arr[counter_for_result_reader] != true){
 				//std::cerr << "in cv" << counter_for_result_reader<< " "<< endl;
+				mtx_query_queue_arr.unlock();
 				readLimit.wait(lock);
-				goto back;
+				continue;
 				//std::cerr << "wake up" << counter_for_result_reader<< " "<< endl;
 			}
-
+			break;
 		}
 
 		//std::cerr << "in rr ------" << counter_for_result_reader<< " "<< endl;
