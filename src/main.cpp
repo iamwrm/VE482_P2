@@ -68,10 +68,9 @@ std::vector<QueryResult::Ptr> query_result_queue;
 
 std::mutex mtx_print_if;
 
-std::condition_variable cd_if_executed;
+std::condition_variable cd_scheduler_sleep;
 
-
-std::mutex mtx_nothing_to_do;
+std::mutex mtx_scheduler_sleep;
 
 std::mutex mtx_nothing_to_do_2;
 
@@ -287,17 +286,13 @@ void thread_starter(int queryID)
 
 	cd_read_limit.notify_one();
 	cd_real_thread_limit.notify_one();
-	cd_if_executed.notify_one();
+	cd_scheduler_sleep.notify_one();
 
-	mtx_present_thread_num.lock();
-
-	
 	/*
 	std::cerr << "FINISH qID:" << queryID << " tbl:" << this_table_name
 		  << " Th:" << present_thread_num << "w:" << local_inf_qry.write
 		  << "r:" << local_inf_qry.read << " \n";
 		  */
-	mtx_present_thread_num.unlock();
 }
 
 // TODO:
@@ -404,8 +399,8 @@ void scheduler()
 		//std::cerr<<"!!!out for,"<<have_executed<<"|"<<count_for_executed<<endl;
 
 		if (!have_executed){
-		std::unique_lock<std::mutex> lock(mtx_nothing_to_do);
-		cd_if_executed.wait(lock);
+		std::unique_lock<std::mutex> lock(mtx_scheduler_sleep);
+		cd_scheduler_sleep.wait(lock);
 		}
 
 
@@ -438,20 +433,21 @@ void result_reader()
 		//print_if_query_done_arr();
 
 		QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
-		std::cout<<counter_for_result_reader+1<<"\n";
+		std::cout<<counter_for_result_reader+1;
+		std::cout<<"\n";
 
 			//std::cout << "|"<<counter_for_result_reader+1<<std::endl;
 		if (result->display()){
 			std::cout << *result;
-			std::cout.flush();
+			//std::cout.flush();
 		} else{
 			//std::cerr << *result;
 		}
 
 		counter_for_result_reader++;
-		mtx_counter_for_result_reader.lock();
+		//mtx_counter_for_result_reader.lock();
 		//std::cerr << "in rr -finished-----" << counter_for_result_reader<< " "<< "\n";
-		mtx_counter_for_result_reader.unlock();
+		//mtx_counter_for_result_reader.unlock();
 	}
 }
 
