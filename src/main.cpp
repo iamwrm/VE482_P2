@@ -160,6 +160,11 @@ void qq_reader(std::istream &is, QueryParser &p,
 			mtx_query_queue_arr.lock();
 			if (query_string[0 + 8] == 'Q' && query_string[3 + 8] == 't') {
 				query_queue_arr.quit_query = local_inf_qry;
+				mtx_query_queue_arr.unlock();
+				mtx_max_line_num.lock();
+				counter++;
+				mtx_max_line_num.unlock();
+				break;
 			} else  if (query_queue_arr.table_name.find( local_inf_qry.targetTable) != query_queue_arr.table_name.end()) {
 				auto it = query_queue_arr.table_name.find( local_inf_qry.targetTable);
 				query_queue_arr.arr[it->second] .query_data.emplace_back( std::move(local_inf_qry));
@@ -194,7 +199,7 @@ void qq_reader(std::istream &is, QueryParser &p,
 			// End of input
 			break;
 		} catch (const std::exception &e) {
-			std::cout.flush();
+			//std::cout.flush();
 			//std::cerr << e.what() << std::endl;
 		}
 	}
@@ -453,17 +458,19 @@ void result_reader()
 		mtx_counter_for_result_reader.lock();
 
 		QueryResult::Ptr & result = query_result_queue[counter_for_result_reader];
-
 		std::cout<<counter_for_result_reader+1<<"\n";
+
+		mtx_counter_for_result_reader.unlock();
 			//std::cout << "|"<<counter_for_result_reader+1<<std::endl;
 		if (result->display()){
 			std::cout << *result;
 			//std::cout.flush();
 		} else{
-			std::cerr << *result;
+			//std::cerr << *result;
 		}
-		counter_for_result_reader++;
 
+		mtx_counter_for_result_reader.lock();
+		counter_for_result_reader++;
 		mtx_counter_for_result_reader.unlock();
 
 		//std::cerr << "in rr -finished-----" << counter_for_result_reader<< " "<< endl;
