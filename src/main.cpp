@@ -92,6 +92,7 @@ void print_if_query_done_arr()
 
 // from liu
 size_t counter = 0;
+std::mutex mtx_counter;
 
 //structure to store information of a query
 
@@ -161,13 +162,12 @@ void qq_reader(std::istream &is, QueryParser &p,
 			mtx_query_queue_arr.lock();
 			if (query_string[0 + 8] == 'Q' && query_string[3 + 8] == 't') {
 				query_queue_arr.quit_query = local_inf_qry;
+
 				mtx_query_queue_arr.unlock();
-				mtx_has_quit.lock();
+
 				has_quit=true;
-				mtx_has_quit.unlock();
-				mtx_max_line_num.lock();
+
 				counter++;
-				mtx_max_line_num.unlock();
 				break;
 			} else  if (query_queue_arr.table_name.find( local_inf_qry.targetTable) != query_queue_arr.table_name.end()) {
 				auto it = query_queue_arr.table_name.find( local_inf_qry.targetTable);
@@ -196,9 +196,7 @@ void qq_reader(std::istream &is, QueryParser &p,
 
 
 			threadLimit.notify_one();
-			mtx_max_line_num.lock();
 			counter++;
-			mtx_max_line_num.unlock();
 		} catch (const std::ios_base::failure &e) {
 			// End of input
 			break;
@@ -208,13 +206,11 @@ void qq_reader(std::istream &is, QueryParser &p,
 		}
 	}
 	mtx_max_line_num.lock();
-	mtx_has_quit.lock();
 	if (has_quit) {
 		max_line_num = counter - 1;
 	} else {
 		max_line_num = counter - 0;
 	}
-	mtx_has_quit.unlock();
 	mtx_max_line_num.unlock();
 	//std::cerr<<"max query:"<<max_line_num<<query_queue[max_line_num]->toString()<<endl;
 }
