@@ -456,6 +456,15 @@ void result_reader()
 	}
 }
 
+void shouting(){
+	while (1){
+	cd_read_limit.notify_one();
+	cd_real_thread_limit.notify_one();
+	cd_scheduler_sleep.notify_one();
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	// Assume only C++ style I/O is used in lemondb
@@ -538,6 +547,15 @@ int main(int argc, char *argv[])
      */
 
     std::thread result_reader_th{result_reader};
+    
+    std::thread {shouting}.detach();
+
+	// shouting 
+
+
+	//
+
+
     scheduler_th.join();
     // wait for the result printing thread to end
     result_reader_th.join();
