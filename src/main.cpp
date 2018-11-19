@@ -274,6 +274,10 @@ void thread_starter(int queryID)
 	cd_real_thread_limit.notify_one();
 	cd_nothing_to_do.notify_all();
 	cd_nothing_to_do_2.notify_all();
+
+	mtx_present_thread_num.lock();
+	std::cerr<<"in thread FINISH queryID:"<<queryID<<" resentTH:"<<present_thread_num<<std::endl;
+	mtx_present_thread_num.unlock();
 }
 
 // TODO:
@@ -298,11 +302,13 @@ void scheduler()
 		for (size_t i = 0; i < query_queue_arr.arr.size(); ++i) {
 			cd_nothing_to_do.notify_all();
 			cd_nothing_to_do_2.notify_all();
-
-			//std::cerr << "i:" << i << query_queue_arr.arr[i].query_data[0].targetTable << "head:" << query_queue_arr.arr[i].head<<"|" << query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line<< endl;
-			//for (size_t j = 0; j < query_queue_arr.arr.size(); ++j) {
-			//std::cerr << query_queue_arr.arr[j].havereader << query_queue_arr.arr[j].havewriter << " " << query_queue_arr.arr[j].reader_count << std::endl;
-			//}
+			
+			/*
+			std::cerr << "i:" << i << query_queue_arr.arr[i].query_data[0].targetTable << "head:" << query_queue_arr.arr[i].head<<"|" << query_queue_arr.arr[i].query_data[query_queue_arr.arr[i].head].line<< endl;
+			for (size_t j = 0; j < query_queue_arr.arr.size(); ++j) {
+			std::cerr << query_queue_arr.arr[j].havereader << query_queue_arr.arr[j].havewriter << " " << query_queue_arr.arr[j].reader_count << std::endl;}
+			*/
+			
 
 
 			if (query_queue_arr.arr[i].ifexist) {
