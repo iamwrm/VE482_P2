@@ -301,10 +301,13 @@ void scheduler()
 	while (1) {
 
 		mtx_max_line_num.lock();
+		mtx_count_for_executed.lock();
 		if ((max_line_num>0)&&(count_for_executed>max_line_num-1)){
+			mtx_count_for_executed.unlock();
 			mtx_max_line_num.unlock();
 			break;
 		}
+		mtx_count_for_executed.unlock();
 		mtx_max_line_num.unlock();
 
 		bool have_executed=false;
@@ -426,7 +429,7 @@ void result_reader()
 
 		// check if counter is bigger than executed
 		{
-			std::unique_lock<std::mutex> lock(mtx_query_queue_arr);
+			std::unique_lock<std::mutex> lock(mtx_if_query_done_arr);
 			cd_read_limit.wait(lock,[]{return if_query_done_arr[counter_for_result_reader];});
 		}
 
