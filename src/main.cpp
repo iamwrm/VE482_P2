@@ -519,13 +519,17 @@ int main(int argc, char *argv[])
     p.registerQueryBuilder(std::make_unique<QueryBuilder(ManageTable)>());
     p.registerQueryBuilder(std::make_unique<QueryBuilder(Complex)>());
 
+    std::cerr<<"after qpp\n";
 
 
     // read the listened file
     qq_reader(is,p,query_queue,query_queue_property,query_queue_arr);
 
+    std::cerr<<"after qq_reader\n";
+
     std::thread scheduler_th{scheduler};
 
+    std::cerr<<"after scheduler_th\n";
 
     /*
     for (auto it = query_queue_property.begin();
@@ -551,22 +555,27 @@ int main(int argc, char *argv[])
      */
 
     std::thread result_reader_th{result_reader};
+    std::cerr<<"after result_reader\n";
     
     std::thread {shouting}.detach();
+    std::cerr<<"after shouting\n";
 
 	// shouting 
 
 
 	//
 
+    std::cerr<<query_queue_arr.arr.size()<<"\n";
 
     scheduler_th.join();
     // wait for the result printing thread to end
+    std::cerr<<"after stj\n";
     result_reader_th.join();
+    std::cerr<<"after rrj\n";
 
     //std::cout<<"finish"<<endl;
 
-	//std::cerr<<"--------------out of while";
+
 	//query_queue[max_line_num]->execute();
 	//std::cerr<<"--------------out of quit";
     //std::this_thread::sleep_for(std::chrono::seconds(10));
