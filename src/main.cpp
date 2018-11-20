@@ -217,8 +217,8 @@ void qq_reader(std::istream &is, QueryParser &p,
 // TODO:
 void thread_starter(int queryID)
 {
-	//std::cerr<<"in thread starter queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
 
+	std::cerr<<"in thread starter write queryID:"<<queryID<<"resentTH:"<<present_thread_num<<std::endl;
 
 	query_result_queue[queryID]= query_queue[queryID]->execute();
 
@@ -273,15 +273,14 @@ void thread_starter(int queryID)
 	mtx_query_queue_arr.unlock();
 
 
-	mtx_present_thread_num.lock(); present_thread_num--; mtx_present_thread_num.unlock();
-
 	mtx_count_for_executed.lock(); count_for_executed++; mtx_count_for_executed.unlock();
 
 	mtx_if_query_done_arr.lock(); if_query_done_arr[queryID] = true; mtx_if_query_done_arr.unlock();
 
 	cd_read_limit.notify_one();
-	cd_real_thread_limit.notify_one();
 	cd_scheduler_sleep.notify_one();
+	mtx_present_thread_num.lock(); present_thread_num--; mtx_present_thread_num.unlock();
+	cd_real_thread_limit.notify_one();
 
 	/*
 	std::cerr << "FINISH qID:" << queryID << " tbl:" << this_table_name
@@ -326,8 +325,12 @@ void scheduler()
 				{
 					std::unique_lock<std::mutex> lock(mtx_present_thread_num);
 					
-					if (present_thread_num > (int)std::thread::hardware_concurrency()-4||present_thread_num>8) {
-					cd_real_thread_limit.wait(lock,[]{return present_thread_num <= 8 && present_thread_num <=(int)std::thread::hardware_concurrency()-4;});
+					if (present_thread_num > (int)std::thread::hardware_concurrency()-4||present_thread_num>parsedArgs.threads-4) {
+					cd_real_thread_limit.wait(lock,[]{return present_thread_num <= parsedArgs.threads-4 && present_thread_num <=(int)std::thread::hardware_concurrency()-4;});
+
+					//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+
 					}
 				}
 					mtx_query_queue_arr.lock();
@@ -349,6 +352,7 @@ void scheduler()
 					if (query_queue_arr.arr[i].havereader) {
 
 
+
 						mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 						query_queue_arr.arr[i].reader_count++;
 						std::thread{thread_starter, queryID}.detach();
@@ -367,6 +371,7 @@ void scheduler()
 					} else 
 					{
 
+						//mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 						mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 						query_queue_arr.arr[i].havereader = true;
 						query_queue_arr.arr[i].reader_count=1;
@@ -384,6 +389,7 @@ void scheduler()
 						//mtx_query_queue_arr.unlock();
 						continue;
 					} else {
+						//mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 						mtx_present_thread_num.lock(); present_thread_num++; mtx_present_thread_num.unlock();
 						query_queue_arr.arr[i].havewriter = true;
 						std::thread{thread_starter, queryID}.detach();
@@ -412,6 +418,7 @@ void scheduler()
 
 
 	}
+	//std::cerr << "in sc -finished-----" << "\n";
 }
 
 // TODO:
@@ -454,9 +461,9 @@ void result_reader()
 
 		counter_for_result_reader++;
 		//mtx_counter_for_result_reader.lock();
-		//std::cerr << "in rr -finished-----" << counter_for_result_reader<< " "<< "\n";
 		//mtx_counter_for_result_reader.unlock();
 	}
+	//std::cerr << "in rr -finished-----" << counter_for_result_reader<< " "<< "\n";
 }
 
 void shouting(){
@@ -521,60 +528,39 @@ int main(int argc, char *argv[])
     p.registerQueryBuilder(std::make_unique<QueryBuilder(ManageTable)>());
     p.registerQueryBuilder(std::make_unique<QueryBuilder(Complex)>());
 
-    std::cerr<<"after qpp\n";
+    //std::cerr<<"after qpp\n";
 
 
-std::vector<inf_qry> 	place_hd_iqv;
+    std::vector<inf_qry> place_hd_iqv;
     // read the listened file
     qq_reader(is,p,query_queue,place_hd_iqv,query_queue_arr);
 
-    std::cerr<<"after qq_reader\n";
+    //std::cerr<<"after qq_reader\n";
 
     std::thread scheduler_th{scheduler};
 
-    std::cerr<<"after scheduler_th\n";
+    //std::cerr<<"after scheduler_th\n";
 
-    /*
-    for (auto it = query_queue_property.begin();
-	 it != query_queue_property.end(); it++) {
-	    std::cout << it->line << std::endl;
-    }
-     */
 
-    /*
-    cout<<query_queue_arr.arr.size()<<endl;
-
-    for (auto it = query_queue_arr.arr.begin(); 
-        it != query_queue_arr.arr.end();
-	    it++) {
-	    std::vector<inf_qry> &the_arr = it->query_data;
-	    std::cout << the_arr[0].targetTable << std::endl;
-	    for (auto jt = the_arr.begin(); jt != the_arr.end(); jt++) {
-            std::cout<<jt->line<<" ";
-
-	    }
-        std::cout<<std::endl;
-    }
-     */
-
-    std::thread result_reader_th{result_reader};
-    std::cerr<<"after result_reader\n";
+    //std::thread result_reader_th{result_reader};
+    result_reader();
+    //std::cerr<<"after result_reader\n";
     
     //std::thread {shouting}.detach();
-    std::cerr<<"after shouting\n";
+    //std::cerr<<"after shouting\n";
 
 	// shouting 
 
 
 	//
 
-    std::cerr<<query_queue_arr.arr.size()<<"\n";
+    //std::cerr<<query_queue_arr.arr.size()<<"\n";
 
     scheduler_th.join();
     // wait for the result printing thread to end
-    std::cerr<<"after stj\n";
-    result_reader_th.join();
-    std::cerr<<"after rrj\n";
+    //std::cerr<<"after stj\n";
+    //result_reader_th.join();
+    //std::cerr<<"after rrj\n";
 
     //std::cout<<"finish"<<endl;
 
